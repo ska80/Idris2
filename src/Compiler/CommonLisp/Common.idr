@@ -69,41 +69,41 @@ boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
 
 ||| Generate lisp for a primitive function.
 lspOp : PrimFn arity -> Vect arity String -> String
-lspOp (Add IntType) [x, y] = op "b+" [x, y, "63"]
-lspOp (Sub IntType) [x, y] = op "b-" [x, y, "63"]
-lspOp (Mul IntType) [x, y] = op "b*" [x, y, "63"]
-lspOp (Div IntType) [x, y] = op "b/" [x, y, "63"]
+lspOp (Add IntType) [x, y] = op "blodwen-rts:b+" [x, y, "63"]
+lspOp (Sub IntType) [x, y] = op "blodwen-rts:b-" [x, y, "63"]
+lspOp (Mul IntType) [x, y] = op "blodwen-rts:b*" [x, y, "63"]
+lspOp (Div IntType) [x, y] = op "blodwen-rts:b/" [x, y, "63"]
 lspOp (Add ty) [x, y] = op "+" [x, y]
 lspOp (Sub ty) [x, y] = op "-" [x, y]
 lspOp (Mul ty) [x, y] = op "*" [x, y]
 lspOp (Div ty) [x, y] = op "/" [x, y]
-lspOp (Mod ty) [x, y] = op "remainder" [x, y]
+lspOp (Mod ty) [x, y] = op "rem" [x, y]
 lspOp (Neg ty) [x] = op "-" [x]
-lspOp (ShiftL ty) [x, y] = op "blodwen-shl" [x, y]
-lspOp (ShiftR ty) [x, y] = op "blodwen-shr" [x, y]
-lspOp (LT CharType) [x, y] = boolop "char<?" [x, y]
-lspOp (LTE CharType) [x, y] = boolop "char<=?" [x, y]
-lspOp (EQ CharType) [x, y] = boolop "char=?" [x, y]
-lspOp (GTE CharType) [x, y] = boolop "char>=?" [x, y]
-lspOp (GT CharType) [x, y] = boolop "char>?" [x, y]
-lspOp (LT StringType) [x, y] = boolop "string<?" [x, y]
-lspOp (LTE StringType) [x, y] = boolop "string<=?" [x, y]
-lspOp (EQ StringType) [x, y] = boolop "string=?" [x, y]
-lspOp (GTE StringType) [x, y] = boolop "string>=?" [x, y]
-lspOp (GT StringType) [x, y] = boolop "string>?" [x, y]
+lspOp (ShiftL ty) [x, y] = op "blodwen-rts:blodwen-shl" [x, y]
+lspOp (ShiftR ty) [x, y] = op "blodwen-rts:blodwen-shr" [x, y]
+lspOp (LT CharType) [x, y] = boolop "char<" [x, y]
+lspOp (LTE CharType) [x, y] = boolop "char<=" [x, y]
+lspOp (EQ CharType) [x, y] = boolop "char=" [x, y]
+lspOp (GTE CharType) [x, y] = boolop "char>=" [x, y]
+lspOp (GT CharType) [x, y] = boolop "char>" [x, y]
+lspOp (LT StringType) [x, y] = boolop "string<" [x, y]
+lspOp (LTE StringType) [x, y] = boolop "string<=" [x, y]
+lspOp (EQ StringType) [x, y] = boolop "string=" [x, y]
+lspOp (GTE StringType) [x, y] = boolop "string>=" [x, y]
+lspOp (GT StringType) [x, y] = boolop "string>" [x, y]
 lspOp (LT ty) [x, y] = boolop "<" [x, y]
 lspOp (LTE ty) [x, y] = boolop "<=" [x, y]
 lspOp (EQ ty) [x, y] = boolop "=" [x, y]
 lspOp (GTE ty) [x, y] = boolop ">=" [x, y]
 lspOp (GT ty) [x, y] = boolop ">" [x, y]
-lspOp StrLength [x] = op "string-length" [x]
-lspOp StrHead [x] = op "string-ref" [x, "0"]
-lspOp StrTail [x] = op "substring" [x, "1", op "string-length" [x]]
-lspOp StrIndex [x, i] = op "string-ref" [x, i]
-lspOp StrCons [x, y] = op "string-cons" [x, y]
-lspOp StrAppend [x, y] = op "string-append" [x, y]
-lspOp StrReverse [x] = op "string-reverse" [x]
-lspOp StrSubstr [x, y, z] = op "string-substr" [x, y, z]
+lspOp StrLength [x] = op "length" [x]
+lspOp StrHead [x] = op "char" [x, "0"]
+lspOp StrTail [x] = op "subseq" [x, "1", op "length" [x]]
+lspOp StrIndex [x, i] = op "char" [x, i]
+lspOp StrCons [x, y] = op "blodwen-rts:string-cons" [x, y]
+lspOp StrAppend [x, y] = op "blodwen-rts:string-append" [x, y]
+lspOp StrReverse [x] = op "blodwen-rts:string-reverse" [x]
+lspOp StrSubstr [x, y, z] = op "blodwen-rts:string-substr" [x, y, z]
 
 lspOp DoubleExp [x] = op "exp" [x]
 lspOp DoubleLog [x] = op "log" [x]
@@ -117,28 +117,28 @@ lspOp DoubleSqrt [x] = op "sqrt" [x]
 lspOp DoubleFloor [x] = op "floor" [x]
 lspOp DoubleCeiling [x] = op "ceiling" [x]
 
-lspOp (Cast IntType StringType) [x] = op "number->string" [x]
-lspOp (Cast IntegerType StringType) [x] = op "number->string" [x]
-lspOp (Cast DoubleType StringType) [x] = op "number->string" [x]
+lspOp (Cast IntType StringType) [x] = op "princ-to-string" [x]
+lspOp (Cast IntegerType StringType) [x] = op "princ-to-string" [x]
+lspOp (Cast DoubleType StringType) [x] = op "princ-to-string" [x]
 lspOp (Cast CharType StringType) [x] = op "string" [x]
 
 lspOp (Cast IntType IntegerType) [x] = x
 lspOp (Cast DoubleType IntegerType) [x] = op "floor" [x]
-lspOp (Cast CharType IntegerType) [x] = op "char->integer" [x]
-lspOp (Cast StringType IntegerType) [x] = op "cast-string-int" [x]
+lspOp (Cast CharType IntegerType) [x] = op "char-code" [x]
+lspOp (Cast StringType IntegerType) [x] = op "blodwen-rts:cast-string-int" [x]
 
 lspOp (Cast IntegerType IntType) [x] = x
 lspOp (Cast DoubleType IntType) [x] = op "floor" [x]
-lspOp (Cast StringType IntType) [x] = op "cast-string-int" [x]
-lspOp (Cast CharType IntType) [x] = op "char->integer" [x]
+lspOp (Cast StringType IntType) [x] = op "blodwen-rts:cast-string-int" [x]
+lspOp (Cast CharType IntType) [x] = op "char-code" [x]
 
-lspOp (Cast IntegerType DoubleType) [x] = op "exact->inexact" [x]
-lspOp (Cast IntType DoubleType) [x] = op "exact->inexact" [x]
-lspOp (Cast StringType DoubleType) [x] = op "cast-string-double" [x]
+lspOp (Cast IntegerType DoubleType) [x] = op "float" [x, "1.0d0"]
+lspOp (Cast IntType DoubleType) [x] = op "float" [x, "1.0d0"]
+lspOp (Cast StringType DoubleType) [x] = op "blodwen-rts:cast-string-double" [x]
 
-lspOp (Cast IntType CharType) [x] = op "integer->char" [x]
+lspOp (Cast IntType CharType) [x] = op "code-char" [x]
 
-lspOp (Cast from to) [x] = "(blodwen-error-quit \"Invalid cast " ++ show from ++ "->" ++ show to ++ "\")"
+lspOp (Cast from to) [x] = "(blodwen-rts:blodwen-error-quit \"Invalid cast " ++ show from ++ "->" ++ show to ++ "\")"
 
 lspOp BelieveMe [_,_,x] = x
 
@@ -195,7 +195,7 @@ toPrim pn = Unknown pn
 
 export
 mkWorld : String -> String
-mkWorld res = lspConstructor 0 ["#f", res, "#f"] -- MkIORes
+mkWorld res = lspConstructor 0 ["NIL", res, "NIL"] -- MkIORes
 
 lspConstant : Constant -> String
 lspConstant (I x) = show x
@@ -203,17 +203,17 @@ lspConstant (BI x) = show x
 lspConstant (Str x) = show x
 lspConstant (Ch x) = "#\\" ++ cast x
 lspConstant (Db x) = show x
-lspConstant WorldVal = "#f"
-lspConstant IntType = "#t"
-lspConstant IntegerType = "#t"
-lspConstant StringType = "#t"
-lspConstant CharType = "#t"
-lspConstant DoubleType = "#t"
-lspConstant WorldType = "#t"
+lspConstant WorldVal = "NIL"
+lspConstant IntType = "T"
+lspConstant IntegerType = "T"
+lspConstant StringType = "T"
+lspConstant CharType = "T"
+lspConstant DoubleType = "T"
+lspConstant WorldType = "T"
 
 lspCaseDef : Maybe String -> String
 lspCaseDef Nothing = ""
-lspCaseDef (Just tm) = "(else " ++ tm ++ ")"
+lspCaseDef (Just tm) = "(otherwise " ++ tm ++ ")"
 
 parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String)
   mutual
@@ -226,12 +226,12 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
         bindArgs : Int -> (ns : List Name) -> SVars (ns ++ vars) -> String -> String
         bindArgs i [] vs body = body
         bindArgs i (n :: ns) (v :: vs) body
-            = "(let ((" ++ v ++ " " ++ "(vector-ref " ++ target ++ " " ++ show i ++ "))) "
+            = "(let ((" ++ v ++ " " ++ "(svref " ++ target ++ " " ++ show i ++ "))) "
                     ++ bindArgs (i + 1) ns vs body ++ ")"
 
     lspConstAlt : Int -> SVars vars -> String -> CConstAlt vars -> Core String
     lspConstAlt i vs target (MkConstAlt c exp)
-        = pure $ "((equal? " ++ target ++ " " ++ lspConstant c ++ ") " ++ !(lspExp i vs exp) ++ ")"
+        = pure $ "((equal " ++ target ++ " " ++ lspConstant c ++ ") " ++ !(lspExp i vs exp) ++ ")"
 
     -- oops, no traverse for Vect in Core
     lspArgs : Int -> SVars vars -> Vect n (CExp vars) -> Core (Vect n String)
@@ -245,7 +245,9 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
     lspExp i vs (CLam fc x sc)
        = do let vs' = extendSVars [x] vs
             sc' <- lspExp i vs' sc
-            pure $ "(lambda (" ++ lookupSVar First vs' ++ ") " ++ sc' ++ ")"
+            pure $ "#'(lambda (" ++ lookupSVar First vs' ++ ") "
+                   ++ "(declare #.blodwen-rts:*optimize-settings* (ignorable "++ lookupSVar First vs' ++ ")) "
+                   ++ sc' ++ ")"
     lspExp i vs (CLet fc x val sc)
        = do let vs' = extendSVars [x] vs
             val' <- lspExp i vs val
@@ -261,13 +263,13 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
         = pure $ lspOp op !(lspArgs i vs args)
     lspExp i vs (CExtPrim fc p args)
         = lspExtPrim i vs (toPrim p) args
-    lspExp i vs (CForce fc t) = pure $ "(force " ++ !(lspExp i vs t) ++ ")"
-    lspExp i vs (CDelay fc t) = pure $ "(delay " ++ !(lspExp i vs t) ++ ")"
+    lspExp i vs (CForce fc t) = pure $ "(blodwen-rts:force " ++ !(lspExp i vs t) ++ ")"
+    lspExp i vs (CDelay fc t) = pure $ "(blodwen-rts:delay " ++ !(lspExp i vs t) ++ ")"
     lspExp i vs (CConCase fc sc alts def)
         = do tcode <- lspExp (i+1) vs sc
              defc <- maybe (pure Nothing) (\v => pure (Just !(lspExp i vs v))) def
              let n = "sc" ++ show i
-             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (case (get-tag " ++ n ++ ") "
+             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (case (blodwen-rts:get-tag " ++ n ++ ") "
                      ++ showSep " " !(traverse (lspConAlt (i+1) vs n) alts)
                      ++ lspCaseDef defc ++ "))"
     lspExp i vs (CConstCase fc sc alts def)
@@ -279,15 +281,15 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
                       ++ lspCaseDef defc ++ "))"
     lspExp i vs (CPrimVal fc c) = pure $ lspConstant c
     lspExp i vs (CErased fc) = pure "'()"
-    lspExp i vs (CCrash fc msg) = pure $ "(blodwen-error-quit " ++ show msg ++ ")"
+    lspExp i vs (CCrash fc msg) = pure $ "(blodwen-rts:blodwen-error-quit " ++ show msg ++ ")"
 
   -- Need to convert the argument (a list of lisp arguments that may
   -- have been constructed at run time) to a lisp list to be passed to apply
   readArgs : Int -> SVars vars -> CExp vars -> Core String
-  readArgs i vs tm = pure $ "(blodwen-read-args " ++ !(lspExp i vs tm) ++ ")"
+  readArgs i vs tm = pure $ "(blodwen-rts:blodwen-read-args " ++ !(lspExp i vs tm) ++ ")"
 
   fileOp : String -> String
-  fileOp op = "(blodwen-file-op (lambda () " ++ op ++ "))"
+  fileOp op = "(blodwen-rts:blodwen-file-op #'(lambda () " ++ op ++ "))"
 
   -- External primitives which are common to the lisp codegens (they can be
   -- overridden)
@@ -297,42 +299,42 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
      = pure $ mkWorld ("(apply " ++ fn ++" "
                   ++ !(readArgs i vs args) ++ ")")
   lspExtCommon i vs LispCall [ret, fn, args, world]
-       = pure $ mkWorld ("(apply (eval (string->symbol " ++ !(lspExp i vs fn) ++")) "
+       = pure $ mkWorld ("(apply (eval (make-symbol " ++ !(lspExp i vs fn) ++")) "
                     ++ !(readArgs i vs args) ++ ")")
   lspExtCommon i vs PutStr [arg, world]
-      = pure $ "(display " ++ !(lspExp i vs arg) ++ ") " ++ mkWorld (lspConstructor 0 []) -- code for MkUnit
+      = pure $ "(princ " ++ !(lspExp i vs arg) ++ ") " ++ mkWorld (lspConstructor 0 []) -- code for MkUnit
   lspExtCommon i vs GetStr [world]
-      = pure $ mkWorld "(blodwen-get-line (current-input-port))"
+      = pure $ mkWorld "(read-line)"
   lspExtCommon i vs FileOpen [file, mode, bin, world]
-      = pure $ mkWorld $ fileOp $ "(blodwen-open "
+      = pure $ mkWorld $ fileOp $ "(blodwen-rts:blodwen-open-stream "
                                       ++ !(lspExp i vs file) ++ " "
                                       ++ !(lspExp i vs mode) ++ " "
                                       ++ !(lspExp i vs bin) ++ ")"
   lspExtCommon i vs FileClose [file, world]
-      = pure $ "(blodwen-close-port " ++ !(lspExp i vs file) ++ ") " ++ mkWorld (lspConstructor 0 [])
+      = pure $ "(blodwen-rts:blodwen-close-stream " ++ !(lspExp i vs file) ++ ") " ++ mkWorld (lspConstructor 0 [])
   lspExtCommon i vs FileReadLine [file, world]
-      = pure $ mkWorld $ fileOp $ "(blodwen-get-line " ++ !(lspExp i vs file) ++ ")"
+      = pure $ mkWorld $ fileOp $ "(blodwen-rts:blodwen-get-line " ++ !(lspExp i vs file) ++ ")"
   lspExtCommon i vs FileWriteLine [file, str, world]
-      = pure $ mkWorld $ fileOp $ "(blodwen-putstring "
+      = pure $ mkWorld $ fileOp $ "(blodwen-rts:blodwen-putstring "
                                         ++ !(lspExp i vs file) ++ " "
                                         ++ !(lspExp i vs str) ++ ")"
   lspExtCommon i vs FileEOF [file, world]
-      = pure $ mkWorld $ "(blodwen-eof " ++ !(lspExp i vs file) ++ ")"
+      = pure $ mkWorld $ "(blodwen-rts:blodwen-eof " ++ !(lspExp i vs file) ++ ")"
   lspExtCommon i vs NewIORef [_, val, world]
-      = pure $ mkWorld $ "(box " ++ !(lspExp i vs val) ++ ")"
+      = pure $ mkWorld $ "(blodwen-rts:box " ++ !(lspExp i vs val) ++ ")"
   lspExtCommon i vs ReadIORef [_, ref, world]
-      = pure $ mkWorld $ "(unbox " ++ !(lspExp i vs ref) ++ ")"
+      = pure $ mkWorld $ "(blodwen-rts:unbox " ++ !(lspExp i vs ref) ++ ")"
   lspExtCommon i vs WriteIORef [_, ref, val, world]
-      = pure $ mkWorld $ "(set-box! "
+      = pure $ mkWorld $ "(blodwen-rts:set-box "
                            ++ !(lspExp i vs ref) ++ " "
                            ++ !(lspExp i vs val) ++ ")"
   lspExtCommon i vs VoidElim [_, _]
-      = pure "(display \"Error: Executed 'void'\")"
+      = pure "(princ \"Error: Executed 'void'\")"
   lspExtCommon i vs (Unknown n) args
       = throw (InternalError ("Can't compile unknown external primitive " ++ show n))
-  lspExtCommon i vs Stdin [] = pure "(current-input-port)"
-  lspExtCommon i vs Stdout [] = pure "(current-output-port)"
-  lspExtCommon i vs Stderr [] = pure "(current-error-port)"
+  lspExtCommon i vs Stdin [] = pure "*standard-input*"
+  lspExtCommon i vs Stdout [] = pure "*standard-output*"
+  lspExtCommon i vs Stderr [] = pure "*error-output*"
   lspExtCommon i vs prim args
       = throw (InternalError ("Badly formed external primitive " ++ show prim
                                 ++ " " ++ show args))
@@ -346,10 +348,13 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
            Name -> CDef -> Core String
   lspDef n (MkFun args exp)
      = let vs = initSVars args in
-           pure $ "(define " ++ lspName !(getFullName n) ++ " (lambda (" ++ lspArglist vs ++ ") "
-                      ++ !(lspExp 0 vs exp) ++ "))\n"
+           pure $ "(defun " ++ lspName !(getFullName n) ++ " (" ++ lspArglist vs ++ ") "
+                  ++ "(declare #.blodwen-rts:*optimize-settings* (ignorable "++ lspArglist vs ++ ")) "
+                  ++ !(lspExp 0 vs exp) ++ ")\n"
   lspDef n (MkError exp)
-     = pure $ "(define (" ++ lspName !(getFullName n) ++ " . any-args) " ++ !(lspExp 0 [] exp) ++ ")\n"
+     = pure $ "(defun " ++ lspName !(getFullName n) ++ " (&rest args) "
+              ++ "(declare #.blodwen-rts:*optimize-settings*) "
+              ++ !(lspExp 0 [] exp) ++ ")\n"
   lspDef n (MkCon t a) = pure "" -- Nothing to compile here
 
 -- Convert the name to lisp code
