@@ -1,6 +1,6 @@
 package idris2
 
-modules = 
+modules =
     Compiler.Common,
     Compiler.CompileExpr,
     Compiler.Inline,
@@ -8,6 +8,8 @@ modules =
     Compiler.Scheme.Chicken,
     Compiler.Scheme.Racket,
     Compiler.Scheme.Common,
+    Compiler.CommonLisp.LispWorks,
+    Compiler.CommonLisp.Common,
 
     Control.Delayed,
 

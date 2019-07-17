@@ -34,17 +34,19 @@ public export
 data CG = Chez
         | Chicken
         | Racket
+        | LispWorks
 
 export
 Eq CG where
   Chez == Chez = True
   Chicken == Chicken = True
   Racket == Racket = True
+  LispWorks == LispWorks = True
   _ == _ = False
 
 export
 availableCGs : List (String, CG)
-availableCGs = [("chez", Chez), ("chicken", Chicken), ("racket", Racket)]
+availableCGs = [("chez", Chez), ("chicken", Chicken), ("racket", Racket), ("lispworks", LispWorks)]
 
 export
 getCG : String -> Maybe CG
