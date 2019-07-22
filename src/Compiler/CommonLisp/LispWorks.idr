@@ -1,5 +1,6 @@
 module Compiler.CommonLisp.LispWorks
 
+
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Inline
@@ -16,11 +17,14 @@ import Data.Vect
 import System
 import System.Info
 
+
 %default covering
+
 
 firstExists : List String -> IO (Maybe String)
 firstExists [] = pure Nothing
 firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
+
 
 findLispWorks : IO String
 findLispWorks
@@ -28,90 +32,66 @@ findLispWorks
                                     x <- ["lispworks", "lw"]]
          maybe (pure "/usr/bin/env lispworks") pure e
 
+
 lspHeader : String
-lspHeader = "\n\n(in-package #:cl-user)\n\n"
+lspHeader = "\n\n"
+         ++ "(in-package #:cl-user)\n\n"
+         ++ "(declaim #.blodwen-rts:*global-optimize-settings*)\n\n"
+
 
 lspFooter : String
 lspFooter = ""
 
-mutual
-  tySpec : CExp vars -> Core String
-  -- Primitive types have been converted to names for the purpose of matching
-  -- on types
-  tySpec (CCon fc (UN "Int") _ []) = pure "int"
-  tySpec (CCon fc (UN "String") _ []) = pure "string"
-  tySpec (CCon fc (UN "Double") _ []) = pure "double"
-  tySpec (CCon fc (UN "Char") _ []) = pure "char"
-  tySpec (CCon fc (NS _ n) _ [])
-     = cond [(n == UN "Unit", pure "void"),
-             (n == UN "Ptr", pure "void*")]
-          (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec ty = throw (GenericMsg (getFC ty) ("Can't pass argument of type " ++ show ty ++ " to foreign function"))
 
-  handleRet : String -> String -> String
-  handleRet "void" op = op ++ " " ++ mkWorld (lspConstructor 0 [])
-  handleRet _ op = mkWorld op
+lispworksExtPrim : Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String
+lispworksExtPrim i vs CCall [ret, fn, fargs, world]
+  = throw (InternalError ("Can't compile C FFI calls to LispWorks yet"))
+lispworksExtPrim i vs prim args
+  = lspExtCommon lispworksExtPrim i vs prim args
 
-  getFArgs : CExp vars -> Core (List (CExp vars, CExp vars))
-  getFArgs (CCon fc _ 0 _) = pure []
-  getFArgs (CCon fc _ 1 [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
-  getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
-  lispworksExtPrim : Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String
-  lispworksExtPrim i vs CCall [ret, CPrimVal fc (Str fn), fargs, world]
-      = do args <- getFArgs fargs
-           argTypes <- traverse tySpec (map fst args)
-           retType <- tySpec ret
-           argsc <- traverse (lspExp lispworksExtPrim 0 vs) (map snd args)
-           pure $ handleRet retType ("((foreign-procedure #f " ++ show fn ++ " ("
-                    ++ showSep " " argTypes ++ ") " ++ retType ++ ") "
-                    ++ showSep " " argsc ++ ")")
-  lispworksExtPrim i vs CCall [ret, fn, args, world]
-      = pure "(error \"bad ffi call\")"
-      -- throw (InternalError ("C FFI calls must be to statically known functions (" ++ show fn ++ ")"))
-  lispworksExtPrim i vs GetStr [world]
-      = pure $ mkWorld "(get-line (current-input-port))"
-  lispworksExtPrim i vs prim args
-      = lspExtCommon lispworksExtPrim i vs prim args
-
-||| Compile a TT expression to Chez Scheme
-compileToSS : Ref Ctxt Defs ->
+||| Compile a TT expression to LispWorks
+compileToLISP : Ref Ctxt Defs ->
               ClosedTerm -> (outfile : String) -> Core ()
-compileToSS c tm outfile
-    = do ds <- getDirectives Chez
+compileToLISP c tm outfile
+    = do ds <- getDirectives LispWorks
          (ns, tags) <- findUsedNames tm
          defs <- get Ctxt
          compdefs <- traverse (getLisp lispworksExtPrim defs) ns
          let code = concat compdefs
          main <- lspExp lispworksExtPrim 0 [] !(compileExp tags tm)
          lispworks <- coreLift findLispWorks
-         support <- readDataFile "chez/support.ss"
-         let lisp = lspHeader ++ support ++ code ++ main ++ lspFooter
+         support <- readDataFile "lispworks/support.lisp"
+         let lisp = support ++ lspHeader ++ code ++ main ++ lspFooter
          Right () <- coreLift $ writeFile outfile lisp
             | Left err => throw (FileErr outfile err)
-         coreLift $ chmod outfile 0o755
+         coreLift $ chmod outfile 0o644
          pure ()
 
 
-||| Chez Scheme implementation of the `compileExpr` interface.
+||| LispWorks implementation of the `compileExpr` interface.
 compileExpr : Ref Ctxt Defs ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr c tm outfile
-    = do let outn = outfile ++ ".ss"
-         compileToSS c tm outn
-         -- TODO: Compile to .so too?
+    = do let outn = outfile ++ ".lisp"
+         compileToLISP c tm outn
          pure (Just outn)
 
-||| Chez Scheme implementation of the `executeExpr` interface.
+
+||| LispWorks implementation of the `executeExpr` interface.
 ||| This implementation simply runs the usual compiler, saving it to a temp file, then interpreting it.
 executeExpr : Ref Ctxt Defs -> ClosedTerm -> Core ()
 executeExpr c tm
     = do tmp <- coreLift $ tmpName
-         let outn = tmp ++ ".ss"
-         compileToSS c tm outn
+         let outn = tmp ++ ".lisp"
+         compileToLISP c tm outn
          lispworks <- coreLift findLispWorks
-         coreLift $ system (lispworks ++ " --script " ++ outn)
+         coreLift $ system $ lispworks
+                             ++ " -siteinit - -init - --load "
+                             ++ outn
+                             ++ " -eval '(lw:quit :status 0)'"
          pure ()
+
 
 ||| Codegen wrapper for LispWorks implementation.
 export

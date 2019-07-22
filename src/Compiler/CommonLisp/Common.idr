@@ -1,5 +1,6 @@
 module Compiler.CommonLisp.Common
 
+
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Inline
@@ -11,7 +12,9 @@ import Core.TT
 import Data.List
 import Data.Vect
 
+
 %default covering
+
 
 lspString : String -> String
 lspString s = concatMap okchar (unpack s)
@@ -20,6 +23,7 @@ lspString s = concatMap okchar (unpack s)
     okchar c = if isAlphaNum c || c =='_'
                   then cast c
                   else "C-" ++ show (cast {to=Int} c)
+
 
 lspName : Name -> String
 lspName (NS ns n) = showSep "-" ns ++ "-" ++ lspName n
@@ -32,6 +36,7 @@ lspName (CaseBlock x y) = "case--" ++ show x ++ "-" ++ show y
 lspName (WithBlock x y) = "with--" ++ show x ++ "-" ++ show y
 lspName (Resolved i) = "fn--" ++ show i
 
+
 -- local variable names as lisp names - we need to invent new names for the locals
 -- because there might be shadows in the original expression which can't be resolved
 -- by the same scoping rules. (e.g. something that computes \x, x => x + x where the
@@ -41,6 +46,7 @@ data SVars : List Name -> Type where
      Nil : SVars []
      (::) : (svar : String) -> SVars ns -> SVars (n :: ns)
 
+
 extendSVars : (xs : List Name) -> SVars ns -> SVars (xs ++ ns)
 extendSVars {ns} xs vs = extSVars' (cast (length ns)) xs vs
   where
@@ -48,24 +54,30 @@ extendSVars {ns} xs vs = extSVars' (cast (length ns)) xs vs
     extSVars' i [] vs = vs
     extSVars' i (x :: xs) vs = lspName (MN "v" i) :: extSVars' (i + 1) xs vs
 
+
 initSVars : (xs : List Name) -> SVars xs
 initSVars xs = rewrite sym (appendNilRightNeutral xs) in extendSVars xs []
+
 
 lookupSVar : {idx : Nat} -> .(IsVar n idx xs) -> SVars xs -> String
 lookupSVar First (n :: ns) = n
 lookupSVar (Later p) (n :: ns) = lookupSVar p ns
 
+
 export
 lspConstructor : Int -> List String -> String
 lspConstructor t args = "(vector " ++ show t ++ " " ++ showSep " " args ++ ")"
+
 
 ||| Generate lisp for a plain function.
 op : String -> List String -> String
 op o args = "(" ++ o ++ " " ++ showSep " " args ++ ")"
 
+
 ||| Generate lisp for a boolean operation.
 boolop : String -> List String -> String
 boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
+
 
 ||| Generate lisp for a primitive function.
 lspOp : PrimFn arity -> Vect arity String -> String
@@ -143,6 +155,7 @@ lspOp (Cast from to) [x] = "(blodwen-rts:blodwen-error-quit \"Invalid cast " ++ 
 
 lspOp BelieveMe [_,_,x] = x
 
+
 ||| Extended primitives for the lisp backend, outside the standard set of primFn
 public export
 data ExtPrim = CCall | LispCall | PutStr | GetStr
@@ -150,6 +163,7 @@ data ExtPrim = CCall | LispCall | PutStr | GetStr
              | NewIORef | ReadIORef | WriteIORef
              | Stdin | Stdout | Stderr
              | VoidElim | Unknown Name
+
 
 export
 Show ExtPrim where
@@ -170,6 +184,7 @@ Show ExtPrim where
   show Stderr = "Stderr"
   show VoidElim = "VoidElim"
   show (Unknown n) = "Unknown " ++ show n
+
 
 ||| Match on a user given name to get the lisp primitive
 toPrim : Name -> ExtPrim
@@ -194,9 +209,11 @@ toPrim pn@(NS _ n)
            (Unknown pn)
 toPrim pn = Unknown pn
 
+
 export
 mkWorld : String -> String
 mkWorld res = lspConstructor 0 ["NIL", res, "NIL"] -- MkIORes
+
 
 lspConstant : Constant -> String
 lspConstant (I x) = show x
@@ -212,9 +229,11 @@ lspConstant CharType = "T"
 lspConstant DoubleType = "T"
 lspConstant WorldType = "T"
 
+
 lspCaseDef : Maybe String -> String
 lspCaseDef Nothing = ""
 lspCaseDef (Just tm) = "(otherwise " ++ tm ++ ")"
+
 
 parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String)
   mutual
@@ -230,14 +249,17 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
             = "(let ((" ++ v ++ " " ++ "(svref " ++ target ++ " " ++ show i ++ "))) "
                     ++ bindArgs (i + 1) ns vs body ++ ")"
 
+
     lspConstAlt : Int -> SVars vars -> String -> CConstAlt vars -> Core String
     lspConstAlt i vs target (MkConstAlt c exp)
         = pure $ "((equal " ++ target ++ " " ++ lspConstant c ++ ") " ++ !(lspExp i vs exp) ++ ")"
+
 
     -- oops, no traverse for Vect in Core
     lspArgs : Int -> SVars vars -> Vect n (CExp vars) -> Core (Vect n String)
     lspArgs i vs [] = pure []
     lspArgs i vs (arg :: args) = pure $ !(lspExp i vs arg) :: !(lspArgs i vs args)
+
 
     export
     lspExp : Int -> SVars vars -> CExp vars -> Core String
@@ -284,24 +306,26 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
     lspExp i vs (CErased fc) = pure "'()"
     lspExp i vs (CCrash fc msg) = pure $ "(blodwen-rts:blodwen-error-quit " ++ show msg ++ ")"
 
+
   -- Need to convert the argument (a list of lisp arguments that may
   -- have been constructed at run time) to a lisp list to be passed to apply
   readArgs : Int -> SVars vars -> CExp vars -> Core String
   readArgs i vs tm = pure $ "(blodwen-rts:blodwen-read-args " ++ !(lspExp i vs tm) ++ ")"
 
+
   fileOp : String -> String
   fileOp op = "(blodwen-rts:blodwen-file-op #'(lambda () " ++ op ++ "))"
+
 
   -- External primitives which are common to the lisp codegens (they can be
   -- overridden)
   export
   lspExtCommon : Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String
   lspExtCommon i vs LispCall [ret, CPrimVal fc (Str fn), args, world]
-     = pure $ mkWorld ("(apply " ++ fn ++" "
-                  ++ !(readArgs i vs args) ++ ")")
+     = pure $ mkWorld ("(apply " ++ fn ++ " " ++ !(readArgs i vs args) ++ ")")
   lspExtCommon i vs LispCall [ret, fn, args, world]
        = pure $ mkWorld ("(apply (eval (make-symbol " ++ !(lspExp i vs fn) ++")) "
-                    ++ !(readArgs i vs args) ++ ")")
+                         ++ !(readArgs i vs args) ++ ")")
   lspExtCommon i vs PutStr [arg, world]
       = pure $ "(princ " ++ !(lspExp i vs arg) ++ ") " ++ mkWorld (lspConstructor 0 []) -- code for MkUnit
   lspExtCommon i vs GetStr [world]
@@ -340,10 +364,12 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
       = throw (InternalError ("Badly formed external primitive " ++ show prim
                                 ++ " " ++ show args))
 
+
   lspArglist : SVars ns -> String
   lspArglist [] = ""
   lspArglist [x] = x
   lspArglist (x :: xs) = x ++ " " ++ lspArglist xs
+
 
   lspDef : {auto c : Ref Ctxt Defs} ->
            Name -> CDef -> Core String
@@ -357,6 +383,7 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
               ++ "(declare #.blodwen-rts:*optimize-settings*) "
               ++ !(lspExp 0 [] exp) ++ ")\n"
   lspDef n (MkCon t a) = pure "" -- Nothing to compile here
+
 
 -- Convert the name to lisp code
 -- (There may be no code generated, for example if it's a constructor)

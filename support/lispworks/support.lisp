@@ -4,6 +4,7 @@
   (:use #:cl)
 
   (:export
+   #:*global-optimize-settings*
    #:*optimize-settings*
    #:*optimize-float-settings*
 
