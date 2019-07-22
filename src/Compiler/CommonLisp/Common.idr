@@ -105,13 +105,14 @@ lspOp StrAppend [x, y] = op "blodwen-rts:string-append" [x, y]
 lspOp StrReverse [x] = op "blodwen-rts:string-reverse" [x]
 lspOp StrSubstr [x, y, z] = op "blodwen-rts:string-substr" [x, y, z]
 
-lspOp DoubleExp [x] = op "exp" [x]
-lspOp DoubleLog [x] = op "log" [x]
+--- `e` is Euler's number, which approximates to: 2.718281828459045
+lspOp DoubleExp [x] = op "exp" [x] -- Base is `e`. Same as: `pow(e, x)`
+lspOp DoubleLog [x] = op "log" [x] -- Base is `e`.
 lspOp DoubleSin [x] = op "sin" [x]
 lspOp DoubleCos [x] = op "cos" [x]
 lspOp DoubleTan [x] = op "tan" [x]
 lspOp DoubleASin [x] = op "asin" [x]
-lspOp DoubleACos [x] = op "asin" [x]
+lspOp DoubleACos [x] = op "acos" [x]
 lspOp DoubleATan [x] = op "atan" [x]
 lspOp DoubleSqrt [x] = op "sqrt" [x]
 lspOp DoubleFloor [x] = op "floor" [x]
