@@ -258,7 +258,7 @@
   (aref buf loc))
 
 (declaim (inline write-8-bytes)
-         (ftype (function (byte-vector (unsigned-byte 64))) write-8-bytes))
+         (ftype (function (byte-vector fixnum (unsigned-byte 64))) write-8-bytes))
 (defun write-8-bytes (buf start integer)
   (declare #.*optimize-settings*
            (type byte-vector buf)
@@ -602,5 +602,5 @@
     (build-args sys:*line-arguments-list*)))
 
 (defun blodwen-error-quit (msg)
-  (format t "~A~%" msg)
+  (format t "~&~A~%" msg)
   (lw:quit :status 1 :ignore-errors-p t))
