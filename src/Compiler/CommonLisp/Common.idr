@@ -25,6 +25,7 @@ lspString s = concatMap okchar (unpack s)
                   else "C-" ++ show (cast {to=Int} c)
 
 
+export
 lspName : Name -> String
 lspName (NS ns n) = showSep "-" ns ++ "-" ++ lspName n
 lspName (UN n) = lspString n
@@ -55,6 +56,7 @@ extendSVars {ns} xs vs = extSVars' (cast (length ns)) xs vs
     extSVars' i (x :: xs) vs = lspName (MN "v" i) :: extSVars' (i + 1) xs vs
 
 
+export
 initSVars : (xs : List Name) -> SVars xs
 initSVars xs = rewrite sym (appendNilRightNeutral xs) in extendSVars xs []
 
@@ -235,6 +237,13 @@ lspCaseDef Nothing = ""
 lspCaseDef (Just tm) = "(otherwise " ++ tm ++ ")"
 
 
+export
+lspArglist : SVars ns -> String
+lspArglist [] = ""
+lspArglist [x] = x
+lspArglist (x :: xs) = x ++ " " ++ lspArglist xs
+
+
 parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String)
   mutual
     lspConAlt : Int -> SVars vars -> String -> CConAlt vars -> Core String
@@ -364,13 +373,6 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
       = throw (InternalError ("Badly formed external primitive " ++ show prim
                                 ++ " " ++ show args))
 
-
-  lspArglist : SVars ns -> String
-  lspArglist [] = ""
-  lspArglist [x] = x
-  lspArglist (x :: xs) = x ++ " " ++ lspArglist xs
-
-
   lspDef : {auto c : Ref Ctxt Defs} ->
            Name -> CDef -> Core String
   lspDef n (MkFun args exp)
@@ -382,6 +384,7 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
      = pure $ "(defun " ++ lspName !(getFullName n) ++ " (&rest args) "
               ++ "(declare #.blodwen-rts:*optimize-settings*) "
               ++ !(lspExp 0 [] exp) ++ ")\n"
+  lspDef n (MkForeign _ _ _) = pure "" -- compiled by specific back end
   lspDef n (MkCon t a) = pure "" -- Nothing to compile here
 
 
