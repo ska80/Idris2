@@ -223,19 +223,19 @@ mkWorld : String -> String
 mkWorld res = lspConstructor 0 ["NIL", res, "NIL"] -- MkIORes
 
 
-lspConstant : Constant -> String
-lspConstant (I x) = show x
-lspConstant (BI x) = show x
-lspConstant (Str x) = show x
-lspConstant (Ch x) = "#\\" ++ cast x
-lspConstant (Db x) = show x
-lspConstant WorldVal = "NIL"
-lspConstant IntType = "T"
-lspConstant IntegerType = "T"
-lspConstant StringType = "T"
-lspConstant CharType = "T"
-lspConstant DoubleType = "T"
-lspConstant WorldType = "T"
+lspConstant : (String -> String) -> Constant -> String
+lspConstant _ (I x) = show x
+lspConstant _ (BI x) = show x
+lspConstant schString (Str x) = schString x
+lspConstant _ (Ch x) = "#\\" ++ cast x
+lspConstant _ (Db x) = show x
+lspConstant _ WorldVal = "NIL"
+lspConstant _ IntType = "T"
+lspConstant _ IntegerType = "T"
+lspConstant _ StringType = "T"
+lspConstant _ CharType = "T"
+lspConstant _ DoubleType = "T"
+lspConstant _ WorldType = "T"
 
 
 lspCaseDef : Maybe String -> String
@@ -250,7 +250,8 @@ lspArglist [x] = x
 lspArglist (x :: xs) = x ++ " " ++ lspArglist xs
 
 
-parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String)
+parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String
+            lspString : String -> String)
   mutual
     lspConAlt : Int -> SVars vars -> String -> CConAlt vars -> Core String
     lspConAlt {vars} i vs target (MkConAlt n tag args sc)
@@ -267,7 +268,7 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
 
     lspConstAlt : Int -> SVars vars -> String -> CConstAlt vars -> Core String
     lspConstAlt i vs target (MkConstAlt c exp)
-        = pure $ "((equal " ++ target ++ " " ++ lspConstant c ++ ") " ++ !(lspExp i vs exp) ++ ")"
+        = pure $ "((equal " ++ target ++ " " ++ lspConstant lspString c ++ ") " ++ !(lspExp i vs exp) ++ ")"
 
 
     -- oops, no traverse for Vect in Core
@@ -317,7 +318,7 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
              pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (cond "
                       ++ showSep " " !(traverse (lspConstAlt (i+1) vs n) alts)
                       ++ lspCaseDef defc ++ "))"
-    lspExp i vs (CPrimVal fc c) = pure $ lspConstant c
+    lspExp i vs (CPrimVal fc c) = pure $ lspConstant lspString c
     lspExp i vs (CErased fc) = pure "'()"
     lspExp i vs (CCrash fc msg) = pure $ "(blodwen-rts:blodwen-error-quit " ++ show msg ++ ")"
 
@@ -399,11 +400,12 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
 export
 getLisp : {auto c : Ref Ctxt Defs} ->
           (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String) ->
+          (lspString : String -> String)
           Defs -> Name -> Core String
-getLisp lspExtPrim defs n
+getLisp lspExtPrim lspString defs n
     = case !(lookupCtxtExact n (gamma defs)) of
            Nothing => throw (InternalError ("Compiling undefined name " ++ show n))
            Just d => case compexpr d of
                           Nothing =>
                              throw (InternalError ("No compiled definition for " ++ show n))
-                          Just d => lspDef lspExtPrim n d
+                          Just d => lspDef lspExtPrim lspString n d

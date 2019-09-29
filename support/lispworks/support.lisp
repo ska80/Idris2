@@ -431,7 +431,7 @@
     (write-error 2)
     (file-does-not-exist-error 3)
     (file-protection-error 4)
-    (otherwise 5)))
+    (otherwise 256)))
 
 ;; If the file operation raises an error, catch it and return an appropriate error code
 (defun blodwen-file-op (op)

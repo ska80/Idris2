@@ -12,6 +12,8 @@ import Core.Name
 import Core.Options
 import Core.TT
 
+import Utils.Hex
+
 import Data.NameMap
 import Data.Vect
 import System
@@ -38,11 +40,35 @@ lspFooter : String
 lspFooter = ""
 
 
+showLispworksChar : Char -> String -> String
+showLispworksChar '\\' = ("\\\\" ++)
+showLispworksChar c
+   = if c < chr 32 || c > chr 126
+        then (("\\u" ++ pad (asHex (cast c))) ++)
+        else strCons c
+  where
+    pad : String -> String
+    pad str
+        = case isLTE (length str) 4 of
+               Yes _ => cast (List.replicate (4 - length str) '0') ++ str
+               No _ => str
+
+
+showLispworksString : List Char -> String -> String
+showLispworksString [] = id
+showLispworksString ('"' :: cs) = ("\\\"" ++) . showLispworksString cs
+showLispworksString (c :: cs) = (showLispworksChar c) . showLispworksString cs
+
+
+lispworksString : String -> String
+lispworksString cs = strCons '"' (showLispworksString (unpack cs) "\"")
+
+
 lispworksExtPrim : Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String
 lispworksExtPrim i vs CCall [ret, fn, fargs, world]
   = throw (InternalError ("Can't compile C FFI calls to LispWorks yet"))
 lispworksExtPrim i vs prim args
-  = lspExtCommon lispworksExtPrim i vs prim args
+  = lspExtCommon lispworksExtPrim lispworksString i vs prim args
 
 
 ||| Compile a TT expression to LispWorks
@@ -52,9 +78,9 @@ compileToLISP c tm outfile
     = do ds <- getDirectives LispWorks
          (ns, tags) <- findUsedNames tm
          defs <- get Ctxt
-         compdefs <- traverse (getLisp lispworksExtPrim defs) ns
+         compdefs <- traverse (getLisp lispworksExtPrim lispworksString defs) ns
          let code = concat compdefs
-         main <- lspExp lispworksExtPrim 0 [] !(compileExp tags tm)
+         main <- lspExp lispworksExtPrim lispworksString 0 [] !(compileExp tags tm)
          lispworks <- coreLift findLispWorks
          support <- readDataFile "lispworks/support.lisp"
          let lisp = support ++ lspHeader ++ code ++ main ++ lspFooter
