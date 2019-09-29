@@ -250,7 +250,7 @@ lspArglist [x] = x
 lspArglist (x :: xs) = x ++ " " ++ lspArglist xs
 
 
-parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String
+parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String,
             lspString : String -> String)
   mutual
     lspConAlt : Int -> SVars vars -> String -> CConAlt vars -> Core String
@@ -400,7 +400,7 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
 export
 getLisp : {auto c : Ref Ctxt Defs} ->
           (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String) ->
-          (lspString : String -> String)
+          (lspString : String -> String) ->
           Defs -> Name -> Core String
 getLisp lspExtPrim lspString defs n
     = case !(lookupCtxtExact n (gamma defs)) of
