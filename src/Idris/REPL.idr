@@ -560,7 +560,10 @@ process (Editing cmd)
          processEdit cmd
          setPPrint ppopts
          pure True
-process Quit 
+process ShowHelp
+    = do iputStrLn "Help!"
+         pure True
+process Quit
     = pure False
 process NOP
     = pure True
@@ -653,8 +656,8 @@ repl
          repeat <- interpret inp
          end <- coreLift $ fEOF stdin
          if repeat && not end
-           then repl 
-           else 
+           then repl
+           else
              do iputStrLn "Bye for now!"
                 pure ()
 

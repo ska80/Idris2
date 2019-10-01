@@ -281,6 +281,7 @@ data REPLCmd : Type where
      Metavars : REPLCmd
      Editing : EditCmd -> REPLCmd
      ShowVersion : REPLCmd
+     ShowHelp : REPLCmd
      Quit : REPLCmd
      NOP : REPLCmd
 
@@ -564,5 +565,3 @@ initSyntax
 -- A label for Syntax info in the global state
 export
 data Syn : Type where
-
-

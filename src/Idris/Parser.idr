@@ -1433,6 +1433,8 @@ nonEmptyCommand
   <|> do symbol ":"; exactIdent "di"
          n <- name
          pure (DebugInfo n)
+  <|> do symbol ":"; replCmd ["?", "h", "help"]
+         pure ShowHelp
   <|> do symbol ":"; replCmd ["q", "quit", "exit"]
          pure Quit
   <|> do symbol ":"; exactIdent "set"
