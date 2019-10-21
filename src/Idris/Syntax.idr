@@ -282,6 +282,7 @@ data REPLCmd : Type where
      Editing : EditCmd -> REPLCmd
      ShowVersion : REPLCmd
      ShowHelp : REPLCmd
+     ShowWarranty : REPLCmd
      Quit : REPLCmd
      NOP : REPLCmd
 

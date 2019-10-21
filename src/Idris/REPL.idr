@@ -400,6 +400,19 @@ loadMainFile f
          updateErrorLine !(buildDeps f)
          setSource res
 
+warranty : String
+warranty = "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY   \n" ++
+           "EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE      \n" ++
+           "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR     \n" ++
+           "PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE    \n" ++
+           "LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR    \n" ++
+           "CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF   \n" ++
+           "SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR        \n" ++
+           "BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,  \n" ++
+           "WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE   \n" ++
+           "OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN \n" ++
+           "IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
+
 -- Returns 'True' if the REPL should continue
 export
 process : {auto c : Ref Ctxt Defs} ->
@@ -562,6 +575,9 @@ process (Editing cmd)
          pure True
 process ShowHelp
     = do iputStrLn "Help!"
+         pure True
+process ShowWarranty
+    = do iputStrLn warranty
          pure True
 process Quit
     = pure False

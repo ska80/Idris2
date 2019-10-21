@@ -101,7 +101,10 @@ banner = "     ____    __     _         ___                                     
          "    /  _/___/ /____(_)____   |__ \\                                          \n" ++
          "    / // __  / ___/ / ___/   __/ /     Version " ++ showVersion version ++ "\n" ++
          "  _/ // /_/ / /  / (__  )   / __/      http://www.idris-lang.org            \n" ++
-         " /___/\\__,_/_/  /_/____/   /____/                                           \n" ++
+         " /___/\\__,_/_/  /_/____/   /____/      Type :? for help                     \n" ++
+         "\n" ++
+         "Idris is free software with ABSOLUTELY NO WARRANTY.                         \n" ++
+         "For details type :warranty.                                                 \n" ++
          "\n" ++
          "Welcome to Idris 2.  Enjoy yourself!"
 

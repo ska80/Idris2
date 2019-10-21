@@ -1435,6 +1435,8 @@ nonEmptyCommand
          pure (DebugInfo n)
   <|> do symbol ":"; replCmd ["?", "h", "help"]
          pure ShowHelp
+  <|> do symbol ":"; replCmd ["warranty"]
+         pure ShowWarranty
   <|> do symbol ":"; replCmd ["q", "quit", "exit"]
          pure Quit
   <|> do symbol ":"; exactIdent "set"
