@@ -64,11 +64,13 @@ lispworksString : String -> String
 lispworksString cs = strCons '"' (showLispworksString (unpack cs) "\"")
 
 
-lispworksExtPrim : Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String
-lispworksExtPrim i vs CCall [ret, fn, fargs, world]
+lispworksPrim : Int -> SVars vars -> ExtPrim -> List (CExp vars) -> Core String
+lispworksPrim i vs CCall [ret, fn, fargs, world]
   = throw (InternalError ("Can't compile C FFI calls to LispWorks yet"))
-lispworksExtPrim i vs prim args
-  = lspExtCommon lispworksExtPrim lispworksString i vs prim args
+lispworksPrim i vs SysCodegen []
+  = pure $ "\"lispworks\""
+lispworksPrim i vs prim args
+  = lspExtCommon lispworksPrim lispworksString i vs prim args
 
 
 ||| Compile a TT expression to LispWorks
@@ -78,9 +80,9 @@ compileToLISP c tm outfile
     = do ds <- getDirectives LispWorks
          (ns, tags) <- findUsedNames tm
          defs <- get Ctxt
-         compdefs <- traverse (getLisp lispworksExtPrim lispworksString defs) ns
+         compdefs <- traverse (getLisp lispworksPrim lispworksString defs) ns
          let code = concat compdefs
-         main <- lspExp lispworksExtPrim lispworksString 0 [] !(compileExp tags tm)
+         main <- lspExp lispworksPrim lispworksString 0 [] !(compileExp tags tm)
          lispworks <- coreLift findLispWorks
          support <- readDataFile "lispworks/support.lisp"
          let lisp = support ++ lspHeader ++ code ++ main ++ lspFooter

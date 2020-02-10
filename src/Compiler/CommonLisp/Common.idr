@@ -12,6 +12,8 @@ import Core.TT
 import Data.List
 import Data.Vect
 
+import System.Info
+
 
 %default covering
 
@@ -101,6 +103,9 @@ lspOp (Mod ty) [x, y] = op "rem" [x, y]
 lspOp (Neg ty) [x] = op "-" [x]
 lspOp (ShiftL ty) [x, y] = op "blodwen-rts:blodwen-shl" [x, y]
 lspOp (ShiftR ty) [x, y] = op "blodwen-rts:blodwen-shr" [x, y]
+lspOp (BAnd ty) [x, y] = op "logand" [x, y]
+lspOp (BOr ty) [x, y] = op "logior" [x, y]
+lspOp (BXOr ty) [x, y] = op "logxor" [x, y]
 lspOp (LT CharType) [x, y] = boolop "char<" [x, y]
 lspOp (LTE CharType) [x, y] = boolop "char<=" [x, y]
 lspOp (EQ CharType) [x, y] = boolop "char=" [x, y]
@@ -169,8 +174,11 @@ public export
 data ExtPrim = CCall | LispCall | PutStr | GetStr
              | FileOpen | FileClose | FileReadLine | FileWriteLine | FileEOF
              | NewIORef | ReadIORef | WriteIORef
+             | NewArray | ArrayGet | ArraySet
              | Stdin | Stdout | Stderr
-             | VoidElim | Unknown Name
+             | VoidElim
+             | SysOS | SysCodegen
+             | Unknown Name
 
 
 export
@@ -187,10 +195,15 @@ Show ExtPrim where
   show NewIORef = "NewIORef"
   show ReadIORef = "ReadIORef"
   show WriteIORef = "WriteIORef"
+  show NewArray = "NewArray"
+  show ArrayGet = "ArrayGet"
+  show ArraySet = "ArraySet"
   show Stdin = "Stdin"
   show Stdout = "Stdout"
   show Stderr = "Stderr"
   show VoidElim = "VoidElim"
+  show SysOS = "SysOS"
+  show SysCodegen = "SysCodegen"
   show (Unknown n) = "Unknown " ++ show n
 
 
@@ -209,10 +222,15 @@ toPrim pn@(NS _ n)
             (n == UN "prim__newIORef", NewIORef),
             (n == UN "prim__readIORef", ReadIORef),
             (n == UN "prim__writeIORef", WriteIORef),
+            (n == UN "prim__newArray", NewArray),
+            (n == UN "prim__arrayGet", ArrayGet),
+            (n == UN "prim__arraySet", ArraySet),
             (n == UN "prim__stdin", Stdin),
             (n == UN "prim__stdout", Stdout),
             (n == UN "prim__stderr", Stderr),
-            (n == UN "void", VoidElim)
+            (n == UN "void", VoidElim),
+            (n == UN "prim__os", SysOS),
+            (n == UN "prim__codegen", SysCodegen)
             ]
            (Unknown pn)
 toPrim pn = Unknown pn
@@ -369,8 +387,20 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
       = pure $ mkWorld $ "(blodwen-rts:set-box "
                            ++ !(lspExp i vs ref) ++ " "
                            ++ !(lspExp i vs val) ++ ")"
+  lspExtCommon i vs NewArray [_, size, val, world]
+      = pure $ mkWorld $ "(make-array " ++ !(lspExp i vs size)
+                         ++ " :initial-element " ++ !(lspExp i vs val) ++ ")"
+  lspExtCommon i vs ArrayGet [_, arr, pos, world]
+      = pure $ mkWorld $ "(aref " ++ !(lspExp i vs arr) ++ " "
+                         ++ !(lspExp i vs pos) ++ ")"
+  lspExtCommon i vs ArraySet [_, arr, pos, val, world]
+      = pure $ mkWorld $ "(setf (aref " ++ !(lspExp i vs arr) ++ " "
+                         ++ !(lspExp i vs pos) ++ ") "
+                         ++ !(lspExp i vs val) ++ ")"
   lspExtCommon i vs VoidElim [_, _]
       = pure "(princ \"Error: Executed 'void'\")"
+  lspExtCommon i vs SysOS []
+      = pure $ show os
   lspExtCommon i vs (Unknown n) args
       = throw (InternalError ("Can't compile unknown external primitive " ++ show n))
   lspExtCommon i vs Stdin [] = pure "*standard-input*"
