@@ -1,30 +1,27 @@
 ;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil; external-format: utf-8; -*-
 
-(cl:defpackage #:blodwen-rts
+(cl:defpackage #:idris-rts
   (:use #:cl)
+  (:shadow
+   #:time
+   #:make-condition)
 
   (:export
    #:*global-optimize-settings*
    #:*optimize-settings*
    #:*optimize-float-settings*
 
-   #:blodwen-read-args
+   #:read-args
 
    #:b+
    #:b-
    #:b*
    #:b/
 
-   #:blodwen-shl
-   #:blodwen-shr
-
    #:cast-string-int
    #:cast-string-double
 
-   #:string-cons
-   #:string-append
-   #:string-reverse
-   #:string-substr
+   #:substring
 
    #:get-tag
 
@@ -35,47 +32,47 @@
    #:unbox
    #:set-box
 
-   #:blodwen-new-buffer
-   #:blodwen-buffer-size
-   #:blodwen-buffer-setbyte
-   #:blodwen-buffer-getbyte
-   #:blodwen-buffer-setint
-   #:blodwen-buffer-getint
-   #:blodwen-buffer-setdouble
-   #:blodwen-buffer-getdouble
-   #:blodwen-buffer-setstring
-   #:blodwen-buffer-getstring
-   #:blodwen-readbuffer
-   #:blodwen-writebuffer
+   #:make-buffer
+   #:buffer-size
+   #:set-buffer-byte
+   #:get-buffer-byte
+   #:set-buffer-int
+   #:get-buffer-int
+   #:set-buffer-double
+   #:get-buffer-double
+   #:set-buffer-string
+   #:get-buffer-string
+   #:read-buffer
+   #:write-buffer
 
-   #:blodwen-file-op
-   #:blodwen-open-stream
-   #:blodwen-close-stream
-   #:blodwen-putstring
-   #:blodwen-get-line
-   #:blodwen-eof
+   #:file-op
+   #:open-stream
+   #:close-stream
+   #:put-string
+   #:get-line
+   #:eofp
 
-   #:blodwen-thread
-   #:blodwen-get-thread-data
-   #:blodwen-set-thread-data
-   #:blodwen-mutex
-   #:blodwen-lock
-   #:blodwen-unlock
-   #:blodwen-thisthread
-   #:blodwen-condition
-   #:blodwen-condition-wait
-   #:blodwen-condition-wait-timeout
-   #:blodwen-condition-signal
-   #:blodwen-condition-broadcast
+   #:make-thread
+   #:get-thread-data
+   #:set-thread-data
+   #:make-mutex
+   #:lock
+   #:unlock
+   #:this-thread
+   #:make-condition
+   #:condition-wait
+   #:condition-wait-timeout
+   #:condition-signal
+   #:condition-broadcast
 
-   #:blodwen-sleep
-   #:blodwen-usleep
-   #:blodwen-time
+   #:sleep
+   #:usleep
+   #:time
 
-   #:blodwen-args
-   #:blodwen-error-quit))
+   #:cmd-args
+   #:error-quit))
 
-(in-package #:blodwen-rts)
+(in-package #:idris-rts)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *global-optimize-settings*
@@ -91,14 +88,14 @@
 
 (setq *read-default-float-format* 'double-float)
 
-(declaim (ftype (function (simple-vector) list) blodwen-read-args))
-(defun blodwen-read-args (desc)
+(declaim (ftype (function (simple-vector) list) read-args))
+(defun read-args (desc)
   (declare #.*optimize-settings*
            (type simple-vector desc))
   (case (svref desc 0)
     ((0) '())
     ((1) (cons (svref desc 2)
-               (blodwen-read-args (svref desc 3))))))
+               (read-args (svref desc 3))))))
 
 (defun b+ (x y bits)
   (declare #.*optimize-settings*)
@@ -116,15 +113,9 @@
   (declare #.*optimize-settings*)
   (rem (floor (/ x y)) (expt 2 bits)))
 
-(defun blodwen-shl (x y)
-  (declare #.*optimize-settings*)
-  (ash x y))
-
-(defun blodwen-shr (x y)
-  (declare #.*optimize-settings*)
-  (ash x (- y)))
-
 (defun destroy-prefix (string)
+  (declare #.*optimize-settings*
+           (type string string))
   (if (and (< 0 (length string))
            (char= (char string 0) #\#))
       ""
@@ -143,27 +134,8 @@
     (parse-error ()
       0.0d0)))
 
-(declaim (ftype (function ((or symbol string) string) string) string-cons))
-(defun string-cons (x y)
-  (declare #.*optimize-settings*
-           (type (or symbol string) x)
-           (type string y))
-  (lw:string-append x y))
-
-(declaim (ftype (function (string string) string) string-append))
-(defun string-append (x y)
-  (declare #.*optimize-settings*
-           (type string x y))
-  (lw:string-append x y))
-
-(declaim (ftype (function (string) string) string-reverse))
-(defun string-reverse (x)
-  (declare #.*optimize-settings*
-           (type string x))
-  (reverse x))
-
-(declaim (ftype (function (fixnum fixnum string) string) string-substr))
-(defun string-substr (off len s)
+(declaim (ftype (function (fixnum fixnum string) string) substring))
+(defun substring (off len s)
   (declare #.*optimize-settings*
            (type fixnum off len)
            (type string s))
@@ -227,8 +199,8 @@
 (deftype byte-vector (&optional size)
   `(simple-array (unsigned-byte 8) (,size)))
 
-(declaim (ftype (function (fixnum) byte-vector) blodwen-new-buffer))
-(defun blodwen-new-buffer (size)
+(declaim (ftype (function (fixnum) byte-vector) make-buffer))
+(defun make-buffer (size)
   (declare #.*optimize-settings*
            (type fixnum size))
   (make-array size
@@ -236,22 +208,22 @@
               :initial-element 0
               :allocation :static))
 
-(declaim (ftype (function (byte-vector) fixnum) blodwen-buffer-size))
-(defun blodwen-buffer-size (buf)
+(declaim (ftype (function (byte-vector) fixnum) buffer-size))
+(defun buffer-size (buf)
   (declare #.*optimize-settings*
            (type byte-vector buf))
   (length buf))
 
-(declaim (ftype (function (byte-vector fixnum (unsigned-byte 8)) (unsigned-byte 8)) blodwen-buffer-setbyte))
-(defun blodwen-buffer-setbyte (buf loc val)
+(declaim (ftype (function (byte-vector fixnum (unsigned-byte 8)) (unsigned-byte 8)) set-buffer-byte))
+(defun set-buffer-byte (buf loc val)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc)
            (type (unsigned-byte 8) val))
   (setf (aref buf loc) val))
 
-(declaim (ftype (function (byte-vector fixnum) (unsigned-byte 8)) blodwen-buffer-getbyte))
-(defun blodwen-buffer-getbyte (buf loc)
+(declaim (ftype (function (byte-vector fixnum) (unsigned-byte 8)) get-buffer-byte))
+(defun get-buffer-byte (buf loc)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc))
@@ -273,8 +245,8 @@
   (setf (aref buf (the fixnum (+ start 6))) (ldb (byte 8 8) integer))
   (setf (aref buf (the fixnum (+ start 7))) (ldb (byte 8 0) integer)))
 
-(declaim (ftype (function (byte-vector fixnum (signed-byte 64)) (signed-byte 64)) blodwen-buffer-setint))
-(defun blodwen-buffer-setint (buf loc val)
+(declaim (ftype (function (byte-vector fixnum (signed-byte 64)) (signed-byte 64)) set-buffer-int))
+(defun set-buffer-int (buf loc val)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc)
@@ -308,8 +280,8 @@
   (logior (ash (read-4-bytes buf start) 32)
           (read-4-bytes buf (the fixnum (+ start 4)))))
 
-(declaim (ftype (function (byte-vector fixnum) (signed-byte 64)) blodwen-buffer-getint))
-(defun blodwen-buffer-getint (buf loc)
+(declaim (ftype (function (byte-vector fixnum) (signed-byte 64)) get-buffer-int))
+(defun get-buffer-int (buf loc)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc))
@@ -365,8 +337,8 @@
                        (- float-significand))
                    (- exponent 1075)))))
 
-(declaim (ftype (function (byte-vector fixnum double-float) double-float) blodwen-buffer-setdouble))
-(defun blodwen-buffer-setdouble (buf loc val)
+(declaim (ftype (function (byte-vector fixnum double-float) double-float) set-buffer-double))
+(defun set-buffer-double (buf loc val)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc)
@@ -374,15 +346,15 @@
   (write-8-bytes buf loc (encode-float64 val))
   val)
 
-(declaim (ftype (function (byte-vector fixnum) double-float) blodwen-buffer-getdouble))
-(defun blodwen-buffer-getdouble (buf loc)
+(declaim (ftype (function (byte-vector fixnum) double-float) get-buffer-double))
+(defun get-buffer-double (buf loc)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc))
   (decode-float64 (read-8-bytes buf loc)))
 
-(declaim (ftype (function (byte-vector fixnum string) string) blodwen-buffer-setstring))
-(defun blodwen-buffer-setstring (buf loc val)
+(declaim (ftype (function (byte-vector fixnum string) string) set-buffer-string))
+(defun set-buffer-string (buf loc val)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc)
@@ -391,8 +363,8 @@
     (replace buf vec :start1 loc :end2 (length vec))
     val))
 
-(declaim (ftype (function (byte-vector fixnum fixnum) string) blodwen-buffer-getstring))
-(defun blodwen-buffer-getstring (buf loc len)
+(declaim (ftype (function (byte-vector fixnum fixnum) string) get-buffer-string))
+(defun get-buffer-string (buf loc len)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc len))
@@ -400,16 +372,16 @@
                              :start loc
                              :end (the fixnum (+ loc len))))
 
-(declaim (ftype (function (stream byte-vector fixnum fixnum) byte-vector) blodwen-readbuffer))
-(defun blodwen-readbuffer (h buf loc max)
+(declaim (ftype (function (stream byte-vector fixnum fixnum) byte-vector) read-buffer))
+(defun read-buffer (h buf loc max)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc max))
   (read-sequence buf h :start loc :end (the fixnum (+ loc max)))
   buf)
 
-(declaim (ftype (function (stream byte-vector fixnum fixnum) string) blodwen-writebuffer))
-(defun blodwen-writebuffer (h buf loc max)
+(declaim (ftype (function (stream byte-vector fixnum fixnum) string) write-buffer))
+(defun write-buffer (h buf loc max)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc max))
@@ -425,7 +397,7 @@
 (defun file-op-error (type)
   (error 'file-op-error :type type))
 
-(defun blodwen-error-code (c)
+(defun error-code (c)
   (case (file-op-error-type c)
     (read-error 1)
     (write-error 2)
@@ -434,13 +406,13 @@
     (otherwise 256)))
 
 ;; If the file operation raises an error, catch it and return an appropriate error code
-(defun blodwen-file-op (op)
+(defun file-op (op)
   (handler-case
       (either-right (funcall op))
     (error (c)
-      (either-left (blodwen-error-code c)))))
+      (either-left (error-code c)))))
 
-(defun blodwen-open-stream (filename mode bin)
+(defun open-stream (filename mode bin)
   (let ((args
           (if (= bin 1)
               (list :element-type '(unsigned-byte 8))
@@ -501,11 +473,11 @@
       (error ()
         (file-op-error 'other-error)))))
 
-(defun blodwen-close-stream (s)
+(defun close-stream (s)
   (when (streamp s)
     (close s)))
 
-(defun blodwen-putstring (s str)
+(defun put-string (s str)
   (when (streamp s)
     (handler-case
         (write-string str s)
@@ -513,7 +485,7 @@
         (file-op-error 'write-error))))
   0)
 
-(defun blodwen-get-line (s)
+(defun get-line (s)
   (if (streamp s)
       (handler-case
           (let ((str (read-line s nil 'eof)))
@@ -524,83 +496,67 @@
           (file-op-error 'read-error)))
       ""))
 
-(defun blodwen-eof (s)
+(defun eofp (s)
   (if (eq 'eof (peek-char nil s nil 'eof)) 1 0))
 
 ;;; Threads
 
-(declaim (inline blodwen-thread))
-(defun blodwen-thread (p)
-  (mp:process-run-function (format nil "Blodwen ~A" p) () p (vector 0)))
+(defun make-thread (p)
+  (mp:process-run-function (format nil "Idris Process ~A" p) () p (vector 0)))
 
-(declaim (inline blodwen-get-thread-data))
-(defun blodwen-get-thread-data ()
-  (mp:process-private-property :blodwen-thread-data))
+(defun get-thread-data ()
+  (mp:process-private-property :idris-thread-data))
 
-(declaim (inline blodwen-set-thread-data))
-(defun blodwen-set-thread-data (a)
-  (setf (mp:process-private-property :blodwen-thread-data) a))
+(defun set-thread-data (a)
+  (setf (mp:process-private-property :idris-thread-data) a))
 
-(declaim (inline blodwen-mutex))
-(defun blodwen-mutex ()
-  (mp:make-lock))
+(defun make-mutex ()
+  (mp:make-lock :name "Idris Lock"))
 
-(declaim (inline blodwen-lock))
-(defun blodwen-lock (m)
+(defun lock (m)
   (mp:process-lock m))
 
-(declaim (inline blodwen-unlock))
-(defun blodwen-unlock (m)
+(defun unlock (m)
   (mp:process-unlock m))
 
-(declaim (inline blodwen-thisthread))
-(defun blodwen-thisthread ()
+(defun this-thread ()
   (sys:current-thread-unique-id))
 
-(declaim (inline blodwen-condition))
-(defun blodwen-condition ()
-  (mp:make-condition-variable))
+(defun make-condition ()
+  (mp:make-condition-variable :name "Idris Condition Variable"))
 
-(declaim (inline blodwen-condition-wait))
-(defun blodwen-condition-wait (c m)
+(defun condition-wait (c m)
   (mp:condition-variable-wait c m))
 
-(declaim (inline blodwen-condition-wait-timeout))
-(defun blodwen-condition-wait-timeout (c m tm)
+(defun condition-wait-timeout (c m tm)
   (mp:condition-variable-wait c m :timeout tm))
 
-(declaim (inline blodwen-condition-signal))
-(defun blodwen-condition-signal (c)
+(defun condition-signal (c)
   (mp:condition-variable-signal c))
 
-(declaim (inline blodwen-condition-broadcast))
-(defun blodwen-condition-broadcast (c)
+(defun condition-broadcast (c)
   (mp:condition-variable-broadcast c))
 
-(declaim (inline blodwen-sleep))
-(defun blodwen-sleep (s)
-  (sleep s))
-
-(declaim (inline blodwen-usleep))
-(defun blodwen-usleep (us)
+(defun usleep (us)
+  (declare #.*optimize-settings*)
   (let ((sec (round us 1000000))
         (micro (mod us 1000000)))
-    (sleep (+ (* 0.000001 micro) sec))))
+    (cl:sleep (+ (* 0.000001 micro) sec))))
 
-(declaim (inline blodwen-time))
-(defun blodwen-time ()
+(defun time ()
+  (declare #.*optimize-settings*)
   (- (get-universal-time)
      #.(encode-universal-time 0 0 0 1 1 1970)))
 
 ;;; Command line
 
-(defun blodwen-args ()
+(defun cmd-args ()
   (labels ((build-args (args)
              (if (endp args)
                  (vector 0 '())
                  (vector 1 '() (car args) (build-args (cdr args))))))
     (build-args sys:*line-arguments-list*)))
 
-(defun blodwen-error-quit (msg)
+(defun error-quit (msg)
   (format t "~&~A~%" msg)
   (lw:quit :status 1 :ignore-errors-p t))
