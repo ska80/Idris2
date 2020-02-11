@@ -1,6 +1,6 @@
 ;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil; external-format: utf-8; -*-
 
-(cl:defpackage #:idris-rts
+(cl:defpackage #:idris
   (:use #:cl)
   (:shadow
    #:time
@@ -13,10 +13,10 @@
 
    #:read-args
 
-   #:b+
-   #:b-
-   #:b*
-   #:b/
+   #:int+
+   #:int-
+   #:int*
+   #:int/
 
    #:cast-string-int
    #:cast-string-double
@@ -72,7 +72,7 @@
    #:cmd-args
    #:error-quit))
 
-(in-package #:idris-rts)
+(in-package #:idris)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *global-optimize-settings*
@@ -97,21 +97,73 @@
     ((1) (cons (svref desc 2)
                (read-args (svref desc 3))))))
 
-(defun b+ (x y bits)
-  (declare #.*optimize-settings*)
-  (rem (+ x y) (expt 2 bits)))
+(define-compiler-macro int+ (&whole form x y &environment env)
+  (if (and (constantp x env)
+           (constantp y env))
+      #-lispworks-64bit `,(sys:int32-to-integer (sys:int32+ x y))
+      #+lispworks-64bit `,(sys:int64-to-integer (sys:int64+ x y))
+      form))
 
-(defun b- (x y bits)
-  (declare #.*optimize-settings*)
-  (rem (- x y) (expt 2 bits)))
+(declaim (inline int+)
+         #-lispworks-64bit (ftype (function ((signed-byte 32) (signed-byte 32)) (signed-byte 32)) int+)
+         #+lispworks-64bit (ftype (function ((signed-byte 64) (signed-byte 64)) (signed-byte 64)) int+))
+(defun int+ (x y)
+  (declare #.*optimize-float-settings*
+           #-lispworks-64bit (type (signed-byte 32) x y)
+           #+lispworks-64bit (type (signed-byte 64) x y))
+  #-lispworks-64bit (sys:int32-to-integer (sys:int32+ x y))
+  #+lispworks-64bit (sys:int64-to-integer (sys:int64+ x y)))
 
-(defun b* (x y bits)
-  (declare #.*optimize-settings*)
-  (rem (* x y) (expt 2 bits)))
+(define-compiler-macro int- (&whole form x y &environment env)
+  (if (and (constantp x env)
+           (constantp y env))
+      #-lispworks-64bit `,(sys:int32-to-integer (sys:int32- x y))
+      #+lispworks-64bit `,(sys:int64-to-integer (sys:int64- x y))
+      form))
 
-(defun b/ (x y bits)
-  (declare #.*optimize-settings*)
-  (rem (floor (/ x y)) (expt 2 bits)))
+(declaim (inline int-)
+         #-lispworks-64bit (ftype (function ((signed-byte 32) (signed-byte 32)) (signed-byte 32)) int-)
+         #+lispworks-64bit (ftype (function ((signed-byte 64) (signed-byte 64)) (signed-byte 64)) int-))
+(defun int- (x y)
+  (declare #.*optimize-float-settings*
+           #-lispworks-64bit (type (signed-byte 32) x y)
+           #+lispworks-64bit (type (signed-byte 64) x y))
+  #-lispworks-64bit (sys:int32-to-integer (sys:int32- x y))
+  #+lispworks-64bit (sys:int64-to-integer (sys:int64- x y)))
+
+(define-compiler-macro int* (&whole form x y &environment env)
+  (if (and (constantp x env)
+           (constantp y env))
+      #-lispworks-64bit `,(sys:int32-to-integer (sys:int32* x y))
+      #+lispworks-64bit `,(sys:int64-to-integer (sys:int64* x y))
+      form))
+
+(declaim (inline int*)
+         #-lispworks-64bit (ftype (function ((signed-byte 32) (signed-byte 32)) (signed-byte 32)) int*)
+         #+lispworks-64bit (ftype (function ((signed-byte 64) (signed-byte 64)) (signed-byte 64)) int*))
+(defun int* (x y)
+  (declare #.*optimize-float-settings*
+           #-lispworks-64bit (type (signed-byte 32) x y)
+           #+lispworks-64bit (type (signed-byte 64) x y))
+  #-lispworks-64bit (sys:int32-to-integer (sys:int32* x y))
+  #+lispworks-64bit (sys:int64-to-integer (sys:int64* x y)))
+
+(define-compiler-macro int/ (&whole form x y &environment env)
+  (if (and (constantp x env)
+           (constantp y env))
+      #-lispworks-64bit `,(sys:int32-to-integer (sys:int32/ x y))
+      #+lispworks-64bit `,(sys:int64-to-integer (sys:int64/ x y))
+      form))
+
+(declaim (inline int/)
+         #-lispworks-64bit (ftype (function ((signed-byte 32) (signed-byte 32)) (signed-byte 32)) int/)
+         #+lispworks-64bit (ftype (function ((signed-byte 64) (signed-byte 64)) (signed-byte 64)) int/))
+(defun int/ (x y)
+  (declare #.*optimize-float-settings*
+           #-lispworks-64bit (type (signed-byte 32) x y)
+           #+lispworks-64bit (type (signed-byte 64) x y))
+  #-lispworks-64bit (sys:int32-to-integer (sys:int32/ x y))
+  #+lispworks-64bit (sys:int64-to-integer (sys:int64/ x y)))
 
 (defun destroy-prefix (string)
   (declare #.*optimize-settings*
@@ -380,12 +432,13 @@
   (read-sequence buf h :start loc :end (the fixnum (+ loc max)))
   buf)
 
-(declaim (ftype (function (stream byte-vector fixnum fixnum) string) write-buffer))
+(declaim (ftype (function (stream byte-vector fixnum fixnum) (values)) write-buffer))
 (defun write-buffer (h buf loc max)
   (declare #.*optimize-settings*
            (type byte-vector buf)
            (type fixnum loc max))
-  (write-sequence buf h :start loc :end (the fixnum (+ loc max))))
+  (write-sequence buf h :start loc :end (the fixnum (+ loc max)))
+  (values))
 
 ;;; I/O
 
@@ -537,11 +590,26 @@
 (defun condition-broadcast (c)
   (mp:condition-variable-broadcast c))
 
-(defun usleep (us)
-  (declare #.*optimize-settings*)
-  (let ((sec (round us 1000000))
-        (micro (mod us 1000000)))
-    (cl:sleep (+ (* 0.000001 micro) sec))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (declaim (inline milliseconds->seconds))
+  (defun milliseconds->seconds (usecs)
+    (declare #.*optimize-float-settings*
+             (type integer usecs))
+    (let ((secs (round usecs 1000000))
+          (micro (mod usecs 1000000)))
+      (declare (type integer secs micro))
+      (+ (* 0.000001 micro) secs)))
+  (declaim (notinline milliseconds->seconds)))
+
+(define-compiler-macro usleep  (&whole form usecs &environment env)
+  (if (constantp usecs env)
+      `(cl:sleep ,(milliseconds->seconds usecs))
+      form))
+
+(defun usleep (usecs)
+  (declare #.*optimize-settings*
+           (inline milliseconds->seconds))
+  (cl:sleep (milliseconds->seconds usecs)))
 
 (defun time ()
   (declare #.*optimize-settings*)

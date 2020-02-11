@@ -33,7 +33,7 @@ findLispWorks
 lspHeader : String
 lspHeader = "\n\n"
          ++ "(in-package #:cl-user)\n\n"
-         ++ "(declaim #.idris-rts:*global-optimize-settings*)\n\n"
+         ++ "(declaim #.idris:*global-optimize-settings*)\n\n"
 
 
 lspFooter : String

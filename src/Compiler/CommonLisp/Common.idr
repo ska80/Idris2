@@ -91,10 +91,10 @@ boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
 
 ||| Generate lisp for a primitive function.
 lspOp : PrimFn arity -> Vect arity String -> String
-lspOp (Add IntType) [x, y] = op "idris-rts:b+" [x, y, "63"]
-lspOp (Sub IntType) [x, y] = op "idris-rts:b-" [x, y, "63"]
-lspOp (Mul IntType) [x, y] = op "idris-rts:b*" [x, y, "63"]
-lspOp (Div IntType) [x, y] = op "idris-rts:b/" [x, y, "63"]
+lspOp (Add IntType) [x, y] = op "idris:int+" [x, y]
+lspOp (Sub IntType) [x, y] = op "idris:int-" [x, y]
+lspOp (Mul IntType) [x, y] = op "idris:int*" [x, y]
+lspOp (Div IntType) [x, y] = op "idris:int/" [x, y]
 lspOp (Add ty) [x, y] = op "+" [x, y]
 lspOp (Sub ty) [x, y] = op "-" [x, y]
 lspOp (Mul ty) [x, y] = op "*" [x, y]
@@ -102,7 +102,7 @@ lspOp (Div ty) [x, y] = op "/" [x, y]
 lspOp (Mod ty) [x, y] = op "rem" [x, y]
 lspOp (Neg ty) [x] = op "-" [x]
 lspOp (ShiftL ty) [x, y] = op "ash" [x, y]
-lspOp (ShiftR ty) [x, y] = op "ash" [x, -y]
+lspOp (ShiftR ty) [x, y] = op "ash" [x, op "-" [y]]
 lspOp (BAnd ty) [x, y] = op "logand" [x, y]
 lspOp (BOr ty) [x, y] = op "logior" [x, y]
 lspOp (BXOr ty) [x, y] = op "logxor" [x, y]
@@ -128,7 +128,7 @@ lspOp StrIndex [x, i] = op "char" [x, i]
 lspOp StrCons [x, y] = op "lw:string-append" [x, y]
 lspOp StrAppend [x, y] = op "lw:string-append" [x, y]
 lspOp StrReverse [x] = op "reverse" [x]
-lspOp StrSubstr [x, y, z] = op "idris-rts:substring" [x, y, z]
+lspOp StrSubstr [x, y, z] = op "idris:substring" [x, y, z]
 
 --- `e` is Euler's number, which approximates to: 2.718281828459045
 lspOp DoubleExp [x] = op "exp" [x] -- Base is `e`. Same as: `pow(e, x)`
@@ -151,20 +151,20 @@ lspOp (Cast CharType StringType) [x] = op "string" [x]
 lspOp (Cast IntType IntegerType) [x] = x
 lspOp (Cast DoubleType IntegerType) [x] = op "floor" [x]
 lspOp (Cast CharType IntegerType) [x] = op "char-code" [x]
-lspOp (Cast StringType IntegerType) [x] = op "idris-rts:cast-string-int" [x]
+lspOp (Cast StringType IntegerType) [x] = op "idris:cast-string-int" [x]
 
 lspOp (Cast IntegerType IntType) [x] = x
 lspOp (Cast DoubleType IntType) [x] = op "floor" [x]
-lspOp (Cast StringType IntType) [x] = op "idris-rts:cast-string-int" [x]
+lspOp (Cast StringType IntType) [x] = op "idris:cast-string-int" [x]
 lspOp (Cast CharType IntType) [x] = op "char-code" [x]
 
 lspOp (Cast IntegerType DoubleType) [x] = op "float" [x, "1.0d0"]
 lspOp (Cast IntType DoubleType) [x] = op "float" [x, "1.0d0"]
-lspOp (Cast StringType DoubleType) [x] = op "idris-rts:cast-string-double" [x]
+lspOp (Cast StringType DoubleType) [x] = op "idris:cast-string-double" [x]
 
 lspOp (Cast IntType CharType) [x] = op "code-char" [x]
 
-lspOp (Cast from to) [x] = "(idris-rts:error-quit \"Invalid cast " ++ show from ++ "->" ++ show to ++ "\")"
+lspOp (Cast from to) [x] = "(idris:error-quit \"Invalid cast " ++ show from ++ "->" ++ show to ++ "\")"
 
 lspOp BelieveMe [_,_,x] = x
 
@@ -303,7 +303,7 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
        = do let vs' = extendSVars [x] vs
             sc' <- lspExp i vs' sc
             pure $ "#'(lambda (" ++ lookupSVar First vs' ++ ") "
-                   ++ "(declare #.idris-rts:*optimize-settings* (ignorable "++ lookupSVar First vs' ++ ")) "
+                   ++ "(declare #.idris:*optimize-settings* (ignorable "++ lookupSVar First vs' ++ ")) "
                    ++ sc' ++ ")"
     lspExp i vs (CLet fc x val sc)
        = do let vs' = extendSVars [x] vs
@@ -320,13 +320,13 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
         = pure $ lspOp op !(lspArgs i vs args)
     lspExp i vs (CExtPrim fc p args)
         = lspExtPrim i vs (toPrim p) args
-    lspExp i vs (CForce fc t) = pure $ "(idris-rts:force " ++ !(lspExp i vs t) ++ ")"
-    lspExp i vs (CDelay fc t) = pure $ "(idris-rts:delay " ++ !(lspExp i vs t) ++ ")"
+    lspExp i vs (CForce fc t) = pure $ "(idris:force " ++ !(lspExp i vs t) ++ ")"
+    lspExp i vs (CDelay fc t) = pure $ "(idris:delay " ++ !(lspExp i vs t) ++ ")"
     lspExp i vs (CConCase fc sc alts def)
         = do tcode <- lspExp (i+1) vs sc
              defc <- maybe (pure Nothing) (\v => pure (Just !(lspExp i vs v))) def
              let n = "sc" ++ show i
-             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (case (idris-rts:get-tag " ++ n ++ ") "
+             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (case (idris:get-tag " ++ n ++ ") "
                      ++ showSep " " !(traverse (lspConAlt (i+1) vs n) alts)
                      ++ lspCaseDef defc ++ "))"
     lspExp i vs (CConstCase fc sc alts def)
@@ -338,17 +338,17 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
                       ++ lspCaseDef defc ++ "))"
     lspExp i vs (CPrimVal fc c) = pure $ lspConstant lspString c
     lspExp i vs (CErased fc) = pure "'()"
-    lspExp i vs (CCrash fc msg) = pure $ "(idris-rts:error-quit " ++ show msg ++ ")"
+    lspExp i vs (CCrash fc msg) = pure $ "(idris:error-quit " ++ show msg ++ ")"
 
 
   -- Need to convert the argument (a list of lisp arguments that may
   -- have been constructed at run time) to a lisp list to be passed to apply
   readArgs : Int -> SVars vars -> CExp vars -> Core String
-  readArgs i vs tm = pure $ "(idris-rts:read-args " ++ !(lspExp i vs tm) ++ ")"
+  readArgs i vs tm = pure $ "(idris:read-args " ++ !(lspExp i vs tm) ++ ")"
 
 
   fileOp : String -> String
-  fileOp op = "(idris-rts:file-op #'(lambda () " ++ op ++ "))"
+  fileOp op = "(idris:file-op #'(lambda () " ++ op ++ "))"
 
 
   -- External primitives which are common to the lisp codegens (they can be
@@ -365,26 +365,26 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
   lspExtCommon i vs GetStr [world]
       = pure $ mkWorld "(read-line)"
   lspExtCommon i vs FileOpen [file, mode, bin, world]
-      = pure $ mkWorld $ fileOp $ "(idris-rts:open-stream "
+      = pure $ mkWorld $ fileOp $ "(idris:open-stream "
                                       ++ !(lspExp i vs file) ++ " "
                                       ++ !(lspExp i vs mode) ++ " "
                                       ++ !(lspExp i vs bin) ++ ")"
   lspExtCommon i vs FileClose [file, world]
-      = pure $ "(idris-rts:close-stream " ++ !(lspExp i vs file) ++ ") " ++ mkWorld (lspConstructor 0 [])
+      = pure $ "(idris:close-stream " ++ !(lspExp i vs file) ++ ") " ++ mkWorld (lspConstructor 0 [])
   lspExtCommon i vs FileReadLine [file, world]
-      = pure $ mkWorld $ fileOp $ "(idris-rts:get-line " ++ !(lspExp i vs file) ++ ")"
+      = pure $ mkWorld $ fileOp $ "(idris:get-line " ++ !(lspExp i vs file) ++ ")"
   lspExtCommon i vs FileWriteLine [file, str, world]
-      = pure $ mkWorld $ fileOp $ "(idris-rts:put-string "
+      = pure $ mkWorld $ fileOp $ "(idris:put-string "
                                         ++ !(lspExp i vs file) ++ " "
                                         ++ !(lspExp i vs str) ++ ")"
   lspExtCommon i vs FileEOF [file, world]
-      = pure $ mkWorld $ "(idris-rts:eofp " ++ !(lspExp i vs file) ++ ")"
+      = pure $ mkWorld $ "(idris:eofp " ++ !(lspExp i vs file) ++ ")"
   lspExtCommon i vs NewIORef [_, val, world]
-      = pure $ mkWorld $ "(idris-rts:box " ++ !(lspExp i vs val) ++ ")"
+      = pure $ mkWorld $ "(idris:box " ++ !(lspExp i vs val) ++ ")"
   lspExtCommon i vs ReadIORef [_, ref, world]
-      = pure $ mkWorld $ "(idris-rts:unbox " ++ !(lspExp i vs ref) ++ ")"
+      = pure $ mkWorld $ "(idris:unbox " ++ !(lspExp i vs ref) ++ ")"
   lspExtCommon i vs WriteIORef [_, ref, val, world]
-      = pure $ mkWorld $ "(idris-rts:set-box "
+      = pure $ mkWorld $ "(idris:set-box "
                            ++ !(lspExp i vs ref) ++ " "
                            ++ !(lspExp i vs val) ++ ")"
   lspExtCommon i vs NewArray [_, size, val, world]
@@ -415,11 +415,11 @@ parameters (lspExtPrim : {vars : _} -> Int -> SVars vars -> ExtPrim -> List (CEx
   lspDef n (MkFun args exp)
      = let vs = initSVars args in
            pure $ "(defun " ++ lspName !(getFullName n) ++ " (" ++ lspArglist vs ++ ") "
-                  ++ "(declare #.idris-rts:*optimize-settings* (ignorable "++ lspArglist vs ++ ")) "
+                  ++ "(declare #.idris:*optimize-settings* (ignorable "++ lspArglist vs ++ ")) "
                   ++ !(lspExp 0 vs exp) ++ ")\n"
   lspDef n (MkError exp)
      = pure $ "(defun " ++ lspName !(getFullName n) ++ " (&rest args) "
-              ++ "(declare #.idris-rts:*optimize-settings*) "
+              ++ "(declare #.idris:*optimize-settings*) "
               ++ !(lspExp 0 [] exp) ++ ")\n"
   lspDef n (MkForeign _ _ _) = pure "" -- compiled by specific back end
   lspDef n (MkCon t a) = pure "" -- Nothing to compile here
