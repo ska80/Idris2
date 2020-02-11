@@ -50,7 +50,13 @@
    #:close-stream
    #:put-string
    #:get-line
+   #:file-size
    #:eofp
+
+   #:current-directory
+   #:change-directory
+   #:create-directory
+   #:delete-directory
 
    #:make-thread
    #:get-thread-data
@@ -549,8 +555,33 @@
           (file-op-error 'read-error)))
       ""))
 
+(defun file-size (pathname)
+  (multiple-value-bind (stat errno)
+      (sys:get-file-stat pathname)
+    (or (unless errno
+          (sys:file-stat-size stat))
+        0)))
+
 (defun eofp (s)
   (if (eq 'eof (peek-char nil s nil 'eof)) 1 0))
+
+;;; Directories
+
+(defun current-directory ()
+  (namestring (sys:current-directory)))
+
+(defun change-directory (pathname)
+  (if (lw:file-directory-p pathname)
+      (prog1 1 (hcl:change-directory pathname))
+      0))
+
+(defun create-directory (pathname)
+  (file-op #'(lambda ()
+               (prog1 0
+                 (ensure-directories-exist pathname)))))
+
+(defun delete-directory (pathname)
+  (if (lw:delete-directory pathname) 1 0))
 
 ;;; Threads
 
