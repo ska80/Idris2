@@ -591,25 +591,25 @@
   (mp:condition-variable-broadcast c))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (declaim (inline milliseconds->seconds))
-  (defun milliseconds->seconds (usecs)
+  (declaim (inline useconds->seconds))
+  (defun useconds->seconds (usecs)
     (declare #.*optimize-float-settings*
              (type integer usecs))
     (let ((secs (round usecs 1000000))
           (micro (mod usecs 1000000)))
       (declare (type integer secs micro))
       (+ (* 0.000001 micro) secs)))
-  (declaim (notinline milliseconds->seconds)))
+  (declaim (notinline useconds->seconds)))
 
-(define-compiler-macro usleep  (&whole form usecs &environment env)
+(define-compiler-macro usleep (&whole form usecs &environment env)
   (if (constantp usecs env)
-      `(cl:sleep ,(milliseconds->seconds usecs))
+      `(cl:sleep ,(useconds->seconds usecs))
       form))
 
 (defun usleep (usecs)
   (declare #.*optimize-settings*
-           (inline milliseconds->seconds))
-  (cl:sleep (milliseconds->seconds usecs)))
+           (inline useconds->seconds))
+  (cl:sleep (useconds->seconds usecs)))
 
 (defun time ()
   (declare #.*optimize-settings*)
