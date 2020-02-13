@@ -48,10 +48,6 @@ jsName (WithBlock x y) = "with__" ++ show x ++ "_" ++ show y
 jsName (Resolved i) = "fn__" ++ show i
 
 
--- local variable names as JavaScript names - we need to invent new names for the locals because
--- there might be shadows in the original expression which can't be resolved by the same scoping
--- rules (e.g. something that computes \x, x => x + x where the names are the same but refer to
--- different bindings in the scope)
 public export
 data SVars : List Name -> Type where
      Nil : SVars []
@@ -78,101 +74,112 @@ lookupSVar (Later p) (n :: ns) = lookupSVar p ns
 
 export
 jsConstructor : Int -> List String -> String
-jsConstructor t args = "{t: " ++ show t ++ ", args: [" ++ showSep ", " args ++ "]}"
+jsConstructor t args = "{tag: " ++ show t ++ ", args: [" ++ showSep ", " args ++ "]}"
 
 
-||| Generate JavaScript for a plain function
-op : String -> List String -> String
-op o args = o ++ "(" ++ showSep ", " args ++ ")"
+wrap : String -> String
+wrap e = "(" ++ e ++ ")"
 
 
-||| Generate JavaScript for a boolean operation
-boolop : String -> List String -> String
-boolop o args = "(" ++ op o args ++ " ? 1 : 0)"
+fun : String -> List String -> String
+fun f args = f ++ (wrap $ showSep ", " args)
 
-{-
-||| Generate JavaScript for a primitive function
-schOp : PrimFn arity -> Vect arity String -> String
-schOp (Add IntType) [x, y] = op "b+" [x, y, "63"]
-schOp (Sub IntType) [x, y] = op "b-" [x, y, "63"]
-schOp (Mul IntType) [x, y] = op "b*" [x, y, "63"]
-schOp (Div IntType) [x, y] = op "b/" [x, y, "63"]
-schOp (Add ty) [x, y] = op "+" [x, y]
-schOp (Sub ty) [x, y] = op "-" [x, y]
-schOp (Mul ty) [x, y] = op "*" [x, y]
-schOp (Div ty) [x, y] = op "/" [x, y]
-schOp (Mod ty) [x, y] = op "remainder" [x, y]
-schOp (Neg ty) [x] = op "-" [x]
-schOp (ShiftL ty) [x, y] = op "blodwen-shl" [x, y]
-schOp (ShiftR ty) [x, y] = op "blodwen-shr" [x, y]
-schOp (BAnd ty) [x, y] = op "blodwen-and" [x, y]
-schOp (BOr ty) [x, y] = op "blodwen-or" [x, y]
-schOp (BXOr ty) [x, y] = op "blodwen-xor" [x, y]
-schOp (LT CharType) [x, y] = boolop "char<?" [x, y]
-schOp (LTE CharType) [x, y] = boolop "char<=?" [x, y]
-schOp (EQ CharType) [x, y] = boolop "char=?" [x, y]
-schOp (GTE CharType) [x, y] = boolop "char>=?" [x, y]
-schOp (GT CharType) [x, y] = boolop "char>?" [x, y]
-schOp (LT StringType) [x, y] = boolop "string<?" [x, y]
-schOp (LTE StringType) [x, y] = boolop "string<=?" [x, y]
-schOp (EQ StringType) [x, y] = boolop "string=?" [x, y]
-schOp (GTE StringType) [x, y] = boolop "string>=?" [x, y]
-schOp (GT StringType) [x, y] = boolop "string>?" [x, y]
-schOp (LT ty) [x, y] = boolop "<" [x, y]
-schOp (LTE ty) [x, y] = boolop "<=" [x, y]
-schOp (EQ ty) [x, y] = boolop "=" [x, y]
-schOp (GTE ty) [x, y] = boolop ">=" [x, y]
-schOp (GT ty) [x, y] = boolop ">" [x, y]
-schOp StrLength [x] = op "string-length" [x]
-schOp StrHead [x] = op "string-ref" [x, "0"]
-schOp StrTail [x] = op "substring" [x, "1", op "string-length" [x]]
-schOp StrIndex [x, i] = op "string-ref" [x, i]
-schOp StrCons [x, y] = op "string-cons" [x, y]
-schOp StrAppend [x, y] = op "string-append" [x, y]
-schOp StrReverse [x] = op "string-reverse" [x]
-schOp StrSubstr [x, y, z] = op "string-substr" [x, y, z]
+
+meth : String -> List String -> String -> String
+meth m args x = wrap x ++ "." ++ fun m args
+
+
+prop : String -> String -> String
+prop p x = wrap x ++ "." ++ p
+
+
+index : String -> String -> String
+index i x = wrap x ++ "[" ++ i ++ "]"
+
+
+uop : String -> String -> String
+uop o x = wrap $ showSep "" [o, x]
+
+
+bop : String -> String -> String -> String
+bop o x y = wrap $ showSep " " [x, o, y]
+
+
+boolop : String -> String
+boolop o = wrap $ o ++ " ? 1 : 0"
+
+
+jsOp : PrimFn arity -> Vect arity String -> String
+jsOp (Add IntType) [x, y] = fun "IDRIS.intAdd" [x, y]
+jsOp (Sub IntType) [x, y] = fun "IDRIS.intSub" [x, y]
+jsOp (Mul IntType) [x, y] = fun "IDRIS.intMul" [x, y]
+jsOp (Div IntType) [x, y] = fun "IDRIS.intDiv" [x, y]
+jsOp (Add ty) [x, y] = bop "+" x y
+jsOp (Sub ty) [x, y] = bop "-" x y
+jsOp (Mul ty) [x, y] = bop "*" x y
+jsOp (Div ty) [x, y] = bop "/" x y
+jsOp (Mod ty) [x, y] = bop "%" x y
+jsOp (Neg ty) [x] = uop "-" x
+jsOp (ShiftL ty) [x, y] = bop "<<" x y
+jsOp (ShiftR ty) [x, y] = bop ">>" x y
+jsOp (BAnd ty) [x, y] = bop "&" x y
+jsOp (BOr ty) [x, y] = bop "|" x y
+jsOp (BXOr ty) [x, y] = bop "^" x y
+jsOp (LT ty) [x, y] = boolop $ bop "<" x y
+jsOp (LTE ty) [x, y] = boolop $ bop "<=" x y
+jsOp (EQ ty) [x, y] = boolop $ bop "===" x y
+jsOp (GTE ty) [x, y] = boolop $ bop ">=" x y
+jsOp (GT ty) [x, y] = boolop $ bop ">" x y
+jsOp StrLength [x] = prop "length" x
+jsOp StrHead [x] = index "0" x
+jsOp StrTail [x] = meth "slice" ["1"] x
+jsOp StrIndex [x, i] = index i x
+jsOp StrCons [x, y] = bop "+" x y
+jsOp StrAppend [x, y] = bop "+" x y
+jsOp StrReverse [x] = (meth "join" ["''"] . meth "reverse" [] . meth "split" ["''"]) x
+jsOp StrSubstr [x, y, z] = meth "substr" [y, z] x
 
 -- `e` is Euler's number, which approximates to: 2.718281828459045
-schOp DoubleExp [x] = op "exp" [x] -- Base is `e`. Same as: `pow(e, x)`
-schOp DoubleLog [x] = op "log" [x] -- Base is `e`.
-schOp DoubleSin [x] = op "sin" [x]
-schOp DoubleCos [x] = op "cos" [x]
-schOp DoubleTan [x] = op "tan" [x]
-schOp DoubleASin [x] = op "asin" [x]
-schOp DoubleACos [x] = op "acos" [x]
-schOp DoubleATan [x] = op "atan" [x]
-schOp DoubleSqrt [x] = op "sqrt" [x]
-schOp DoubleFloor [x] = op "floor" [x]
-schOp DoubleCeiling [x] = op "ceiling" [x]
+jsOp DoubleExp [x] = fun "Math.exp" [x] -- Base is `e`. Same as: `pow(e, x)`
+jsOp DoubleLog [x] = fun "Math.log" [x] -- Base is `e`.
+jsOp DoubleSin [x] = fun "Math.sin" [x]
+jsOp DoubleCos [x] = fun "Math.cos" [x]
+jsOp DoubleTan [x] = fun "Math.tan" [x]
+jsOp DoubleASin [x] = fun "Math.asin" [x]
+jsOp DoubleACos [x] = fun "Math.acos" [x]
+jsOp DoubleATan [x] = fun "Math.atan" [x]
+jsOp DoubleSqrt [x] = fun "Math.sqrt" [x]
+jsOp DoubleFloor [x] = fun "Math.floor" [x]
+jsOp DoubleCeiling [x] = fun "Math.ceil" [x]
 
-schOp (Cast IntType StringType) [x] = op "number->string" [x]
-schOp (Cast IntegerType StringType) [x] = op "number->string" [x]
-schOp (Cast DoubleType StringType) [x] = op "number->string" [x]
-schOp (Cast CharType StringType) [x] = op "string" [x]
+jsOp (Cast IntType StringType) [x] = fun "IDRIS.intToString" [x]
+jsOp (Cast IntegerType StringType) [x] = fun "IDRIS.integerToString" [x]
+jsOp (Cast DoubleType StringType) [x] = fun "IDRIS.doubleToString" [x]
+jsOp (Cast CharType StringType) [x] = fun "IDRIS.charToString" [x]
 
-schOp (Cast IntType IntegerType) [x] = x
-schOp (Cast DoubleType IntegerType) [x] = op "floor" [x]
-schOp (Cast CharType IntegerType) [x] = op "char->integer" [x]
-schOp (Cast StringType IntegerType) [x] = op "cast-string-int" [x]
+jsOp (Cast IntType IntegerType) [x] = fun "IDRIS.intToInteger" [x]
+jsOp (Cast DoubleType IntegerType) [x] = fun "IDRIS.doubleToInteger" [x]
+jsOp (Cast CharType IntegerType) [x] = fun "IDRIS.charToInteger" [x]
+jsOp (Cast StringType IntegerType) [x] = fun "IDRIS.stringToInteger" [x]
 
-schOp (Cast IntegerType IntType) [x] = x
-schOp (Cast DoubleType IntType) [x] = op "floor" [x]
-schOp (Cast StringType IntType) [x] = op "cast-string-int" [x]
-schOp (Cast CharType IntType) [x] = op "char->integer" [x]
+jsOp (Cast IntegerType IntType) [x] = fun "IDRIS.integerToInt" [x]
+jsOp (Cast DoubleType IntType) [x] = fun "IDRIS.doubleToInt" [x]
+jsOp (Cast StringType IntType) [x] = fun "IDRIS.stringToInt" [x]
+jsOp (Cast CharType IntType) [x] = fun "IDRIS.charToInt" [x]
 
-schOp (Cast IntegerType DoubleType) [x] = op "exact->inexact" [x]
-schOp (Cast IntType DoubleType) [x] = op "exact->inexact" [x]
-schOp (Cast StringType DoubleType) [x] = op "cast-string-double" [x]
+jsOp (Cast IntegerType DoubleType) [x] = fun "IDRIS.integerToDouble" [x]
+jsOp (Cast IntType DoubleType) [x] = fun "IDRIS.intToDouble" [x]
+jsOp (Cast StringType DoubleType) [x] = fun "IDRIS.stringToDouble" [x]
 
-schOp (Cast IntType CharType) [x] = op "integer->char" [x]
+jsOp (Cast IntType CharType) [x] = fun "IDRIS.intToChar" [x]
 
-schOp (Cast from to) [x] = "(blodwen-error-quit \"Invalid cast " ++ show from ++ "->" ++ show to ++ "\")"
+jsOp (Cast from to) [x] = fun "IDRIS.errorQuit" ["Invalid cast " ++ show from ++ "->" ++ show to]
 
-schOp BelieveMe [_,_,x] = x
+jsOp BelieveMe [_, _, x] = x
 
-||| Extended primitives for the scheme backend, outside the standard set of primFn
+
 public export
-data ExtPrim = CCall | SchemeCall | PutStr | GetStr
+data ExtPrim = JsCall | PutStr | GetStr
              | FileOpen | FileClose | FileReadLine | FileWriteLine | FileEOF
              | NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
@@ -181,10 +188,10 @@ data ExtPrim = CCall | SchemeCall | PutStr | GetStr
              | SysOS | SysCodegen
              | Unknown Name
 
+
 export
 Show ExtPrim where
-  show CCall = "CCall"
-  show SchemeCall = "SchemeCall"
+  show JsCall = "JsCall"
   show PutStr = "PutStr"
   show GetStr = "GetStr"
   show FileOpen = "FileOpen"
@@ -206,11 +213,10 @@ Show ExtPrim where
   show SysCodegen = "SysCodegen"
   show (Unknown n) = "Unknown " ++ show n
 
-||| Match on a user given name to get the scheme primitive
+
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
-    = cond [(n == UN "prim__schemeCall", SchemeCall),
-            (n == UN "prim__cCall", CCall),
+    = cond [(n == UN "prim__jsCall", JsCall),
             (n == UN "prim__putStr", PutStr),
             (n == UN "prim__getStr", GetStr),
             (n == UN "prim__open", FileOpen),
@@ -234,24 +240,32 @@ toPrim pn@(NS _ n)
            (Unknown pn)
 toPrim pn = Unknown pn
 
+
 export
 mkWorld : String -> String
-mkWorld res = schConstructor 0 ["#f", res, "#f"] -- MkIORes
+mkWorld res = jsConstructor 0 ["false", res, "false"] -- MkIORes
 
-schConstant : (String -> String) -> Constant -> String
-schConstant _ (I x) = show x
-schConstant _ (BI x) = show x
-schConstant schString (Str x) = schString x
-schConstant _ (Ch x) = "#\\" ++ cast x
-schConstant _ (Db x) = show x
-schConstant _ WorldVal = "#f"
-schConstant _ IntType = "#t"
-schConstant _ IntegerType = "#t"
-schConstant _ StringType = "#t"
-schConstant _ CharType = "#t"
-schConstant _ DoubleType = "#t"
-schConstant _ WorldType = "#t"
 
+toHex : Char -> String
+toHex c = substr 2 6 (b32ToHexString (fromInteger (cast (ord c))))
+
+
+jsConstant : (String -> String) -> Constant -> String
+jsConstant _ (I x) = show x
+jsConstant _ (BI x) = show x
+jsConstant jsString (Str x) = "'" ++ jsString x ++ "'"
+jsConstant _ (Ch x) = "'\\u" ++ toHex x ++ "'"
+jsConstant _ (Db x) = show x
+jsConstant _ WorldVal = "false"
+jsConstant _ IntType = "true"
+jsConstant _ IntegerType = "true"
+jsConstant _ StringType = "true"
+jsConstant _ CharType = "true"
+jsConstant _ DoubleType = "true"
+jsConstant _ WorldType = "true"
+
+
+{-
 schCaseDef : Maybe String -> String
 schCaseDef Nothing = ""
 schCaseDef (Just tm) = "(else " ++ tm ++ ")"
