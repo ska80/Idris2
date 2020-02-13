@@ -34,17 +34,24 @@ public export
 data CG = Chez
         | Chicken
         | Racket
+        | Node
 
 export
 Eq CG where
   Chez == Chez = True
   Chicken == Chicken = True
   Racket == Racket = True
+  Node == Node = True
   _ == _ = False
 
 export
 availableCGs : List (String, CG)
-availableCGs = [("chez", Chez), ("chicken", Chicken), ("racket", Racket)]
+availableCGs = [
+  ("chez", Chez),
+  ("chicken", Chicken),
+  ("racket", Racket),
+  ("node", Node)
+]
 
 export
 getCG : String -> Maybe CG
@@ -131,8 +138,8 @@ pathSep : Char
 pathSep = if isWindows then ';' else ':'
 
 defaultDirs : Dirs
-defaultDirs = MkDirs "." Nothing "build" 
-                     ("build" ++ dirSep ++ "exec") 
+defaultDirs = MkDirs "." Nothing "build"
+                     ("build" ++ dirSep ++ "exec")
                      "/usr/local" ["."] ["."] []
 
 defaultPPrint : PPrinter

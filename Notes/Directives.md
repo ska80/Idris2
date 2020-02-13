@@ -112,7 +112,7 @@ Syntax:
 The given instructions are passed directly to the code generator, to be
 interpreted in a backend-specific way.
 
-Currently known backends are: `chez`, `chicken` and `racket`.
+Currently known backends are: `chez`, `chicken`, `racket` and `node`.
 
 ## Backend Specific Directives
 
@@ -145,3 +145,5 @@ case the file is simply referenced as `./library_name`
 The directive should be scheme code which is inserted directly into the generated
 code. This can be used, for example, to import external libraries, e.g.
 `%cg chicken (use posix)`.
+
+### Node.js

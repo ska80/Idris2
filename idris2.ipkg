@@ -1,6 +1,6 @@
 package idris2
 
-modules = 
+modules =
     Compiler.Common,
     Compiler.CompileExpr,
     Compiler.Inline,
@@ -8,6 +8,8 @@ modules =
     Compiler.Scheme.Chicken,
     Compiler.Scheme.Racket,
     Compiler.Scheme.Common,
+    Compiler.JavaScript.Node,
+    Compiler.JavaScript.Common,
 
     Control.Delayed,
 
@@ -133,4 +135,3 @@ opts = "--partial-eval"
 -- opts = "--partial-eval --cg-opt -lws2_32" -- windows
 
 main = Idris.Main
-

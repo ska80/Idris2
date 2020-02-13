@@ -705,12 +705,14 @@ TTC CG where
   toBuf b Chez = tag 0
   toBuf b Chicken = tag 1
   toBuf b Racket = tag 2
+  toBuf b Node = tag 3
 
   fromBuf b
       = case !getTag of
              0 => pure Chez
              1 => pure Chicken
              2 => pure Racket
+             3 => pure Node
              _ => corrupt "CG"
 
 export
@@ -949,4 +951,3 @@ Core.Context.decode gam idx (Coded bin)
          coreLift $ writeArray arr idx (Decoded def')
          pure def'
 Core.Context.decode gam idx (Decoded def) = pure def
-
